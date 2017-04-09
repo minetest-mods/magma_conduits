@@ -34,8 +34,8 @@ minetest.register_ore({
 		},
 	column_height_min = 2,
 	column_height_max = 6,
-	height_min = -31000,
-	height_max = 512,
+	height_min = magma_conduits.config.lower_limit,
+	height_max = magma_conduits.config.upper_limit,
 	noise_threshold = 0.9,
 	noise_params = {
 		offset = 0,
