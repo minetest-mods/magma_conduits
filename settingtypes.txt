@@ -1,0 +1,3 @@
+magma_conduits_spread (Approximate spacing between magma conduits) int 400
+magma_conduits_ameliorate_floods (Ameliorate lava floods on the surface) bool true
+magma_conduits_remove_default_lava (Remove default mapgen lava) bool true
