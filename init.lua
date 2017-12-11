@@ -122,5 +122,5 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	vm:calc_lighting()
 	vm:update_liquids()
 	--write it to world
-	vm:write_to_map(data)
+	vm:write_to_map()
 end)
