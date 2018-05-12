@@ -105,11 +105,6 @@ end
 local data = {}
 
 minetest.register_on_generated(function(minp, maxp, seed)
-	--if too far from water level, abort. Caverns are on their own.
---	if minp.y > 512 or maxp.y < water_level then
---		return
---	end
-	
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
 	vm:get_data(data)
