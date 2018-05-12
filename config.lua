@@ -26,5 +26,6 @@ end
 setting("int", "spread", 400, "Approximate spacing between magma conduits")
 setting("bool", "remove_default_lava", true, "Removes default mapgen lava")
 setting("bool", "ameliorate_floods", true, "Ameliorate lava floods on the surface")
+setting("bool", "obsidian_lining", true, "Add an obsidian lining to magma conduits")
 setting("int", "upper_limit", 512, "Upper extent of magma conduits")
 setting("int", "lower_limit", -31000, "Lower extent of magma conduits")

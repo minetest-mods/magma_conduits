@@ -1,6 +1,9 @@
+Note: voxelarea_iterator.lua is separately licensed under the LGPL, see that file for details.
+The rest of this mod is covered by:
+
 MIT License
 
-Copyright (c) 2017 FaceDeer
+Copyright (c) 2018 FaceDeer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

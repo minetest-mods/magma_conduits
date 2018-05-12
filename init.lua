@@ -5,6 +5,7 @@ local modpath = minetest.get_modpath(minetest.get_current_modname())
 
 --load companion lua files
 dofile(modpath.."/config.lua")
+dofile(modpath.."/voxelarea_iterator.lua")
 
 if magma_conduits.config.remove_default_lava then
 	minetest.register_alias_force("mapgen_lava_source", "air") -- veins of lava are far more realistic
@@ -25,6 +26,7 @@ minetest.register_ore({
 		"default:stone_with_coal",
 		"default:stone_with_iron",
 		"default:stone_with_copper",
+		"default:stone_with_tin",
 		"default:stone_with_gold",
 		"default:stone_with_diamond",
 		"default:dirt",
@@ -52,31 +54,50 @@ minetest.register_ore({
 -------------------------------------------------------------------------------------------------
 -- Ameliorate lava floods on the surface world by removing lava that's poised to spill
 
-if not magma_conduits.config.ameliorate_floods then return end
+if not (magma_conduits.config.ameliorate_floods or magma_conduits.config.obsidian_lining) then return end
+
+local ameliorate_floods = magma_conduits.config.ameliorate_floods
+local obsidian_lining = magma_conduits.config.obsidian_lining
 
 local c_air = minetest.get_content_id("air")
 local c_lava = minetest.get_content_id("default:lava_source")
+local c_stone = minetest.get_content_id("default:stone")
+local c_obsidian = minetest.get_content_id("default:obsidian")
 
 local water_level = tonumber(minetest.get_mapgen_setting("water_level"))
 
-local is_adjacent_to_air = function(area, data, pos)
-	return (data[area:index(pos.x+1, pos.y, pos.z)] == c_air
-		or data[area:index(pos.x-1, pos.y, pos.z)] == c_air
-		or data[area:index(pos.x, pos.y, pos.z+1)] == c_air
-		or data[area:index(pos.x, pos.y, pos.z-1)] == c_air
-		or data[area:index(pos.x, pos.y-1, pos.z)] == c_air)
+local is_adjacent_to_air = function(area, data, x, y, z)
+	return (data[area:index(x+1, y, z)] == c_air
+		or data[area:index(x-1, y, z)] == c_air
+		or data[area:index(x, y, z+1)] == c_air
+		or data[area:index(x, y, z-1)] == c_air
+		or data[area:index(x, y-1, z)] == c_air)
 end
 
-magma_conduits.remove_unsupported_lava = function(area, data, vi)
+local remove_unsupported_lava
+remove_unsupported_lava = function(area, data, vi, x, y, z)
+	--if too far from water level, abort. Caverns are on their own.
+	if y < water_level or y > 512 or not area:contains(x, y, z) then return end
+
 	if data[vi] == c_lava then
-		local pos = area:position(vi)
-		if is_adjacent_to_air(area, data, pos) then
+		if is_adjacent_to_air(area, data, x, y, z) then
 			data[vi] = c_air
-			magma_conduits.remove_unsupported_lava(area, data, area:index(pos.x+1, pos.y, pos.z))
-			magma_conduits.remove_unsupported_lava(area, data, area:index(pos.x-1, pos.y, pos.z))
-			magma_conduits.remove_unsupported_lava(area, data, area:index(pos.x, pos.y, pos.z+1))
-			magma_conduits.remove_unsupported_lava(area, data, area:index(pos.x, pos.y, pos.z-1))
-			magma_conduits.remove_unsupported_lava(area, data, area:index(pos.x, pos.y+1, pos.z))
+			for pi, x2, y2, z2 in area:iter_xyz(x-1, y, z-1, x+1, y+1, z+1) do
+				if pi ~= vi and area:containsi(pi) then
+					remove_unsupported_lava(area, data, pi, x2, y2, z2)
+				end
+			end
+		end
+	end
+end
+
+local obsidianize = function(area, data, vi, x, y, z, minp, maxp)
+	if data[vi] == c_lava then
+		for pi in area:iter(math.max(x-1, minp.x), math.max(y-1, minp.y), math.max(z-1, minp.z),
+							math.min(x+1, maxp.x), math.min(y+1, maxp.y), math.min(z+1, maxp.z)) do
+			if data[pi] == c_stone then
+				data[pi] = c_obsidian
+			end
 		end
 	end
 end
@@ -85,33 +106,20 @@ local data = {}
 
 minetest.register_on_generated(function(minp, maxp, seed)
 	--if too far from water level, abort. Caverns are on their own.
-	if minp.y > 512 or maxp.y < water_level then
-		return
-	end
-		
-	--easy reference to commonly used values
-	local t_start = os.clock()
-	local x_max = maxp.x
-	local y_max = maxp.y
-	local z_max = maxp.z
-	local x_min = minp.x
-	local y_min = minp.y
-	local z_min = minp.z
-		
+--	if minp.y > 512 or maxp.y < water_level then
+--		return
+--	end
+	
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
 	vm:get_data(data)
-		
-	for z = z_min, z_max do -- for each xy plane progressing northwards
-		--structure loop, hollows out the cavern
-		for y = y_min, y_max do -- for each x row progressing upwards
-			if y > water_level then
-				local vi = area:index(x_min, y, z) --current node index
-				for x = x_min, x_max do -- for each node do
-					magma_conduits.remove_unsupported_lava(area, data, vi)
-					vi = vi + 1
-				end
-			end
+	
+	for vi, x, y, z in area:iterp_xyz(minp, maxp) do
+		if ameliorate_floods then
+			remove_unsupported_lava(area, data, vi, x, y, z)
+		end
+		if obsidian_lining then
+			obsidianize(area, data, vi, x, y, z, minp, maxp)
 		end
 	end
 		
