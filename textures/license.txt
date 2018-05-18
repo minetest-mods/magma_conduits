@@ -1,0 +1,3 @@
+The following are from the Caverealms mod by HeroOfTheWinds, licensed under the WTFPL:
+
+magma_conduits_hot_cobble.png
