@@ -62,7 +62,7 @@ minetest.register_node("magma_conduits:hot_cobble", {
 	groups = {cracky = 3, stone = 2, hot=1},
 	sounds = default.node_sound_stone_defaults(),
 	light_source = 6,
-	drops = "default:cobble",
+	drop = "default:cobble",
 })
 
 minetest.register_node("magma_conduits:glow_obsidian", {
@@ -72,7 +72,7 @@ minetest.register_node("magma_conduits:glow_obsidian", {
 	sounds = default.node_sound_stone_defaults(),
 	groups = {cracky=1, hot=1, level=2},
 	light_source = 6,
-	drops = "default:obsidian",
+	drop = "default:obsidian",
 })
 
 minetest.register_abm{
