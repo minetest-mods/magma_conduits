@@ -169,12 +169,20 @@ remove_unsupported_lava = function(area, data, vi, x, y, z)
 	end
 end
 
+-- If we're adding glow versions of rock, then place glow obsidian directly.
+local obsidianize_id
+if magma_conduits.config.glowing_rock then
+	obsidianize_id = minetest.get_content_id("magma_conduits:glow_obsidian")
+else
+	obsidianize_id = c_obsidian
+end
+
 local obsidianize = function(area, data, vi, x, y, z, minp, maxp)
 	if data[vi] == c_lava then
 		for pi in area:iter(math.max(x-1, minp.x), math.max(y-1, minp.y), math.max(z-1, minp.z),
 							math.min(x+1, maxp.x), math.min(y+1, maxp.y), math.min(z+1, maxp.z)) do
 			if data[pi] == c_stone then
-				data[pi] = c_obsidian
+				data[pi] = obsidianize_id
 			end
 		end
 	end
