@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-05-18 00:10-0600\n"
+"POT-Creation-Date: 2018-05-22 00:26-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,10 +17,30 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: init.lua:57
+#: hot_rock.lua:7
 msgid "Hot Cobble"
 msgstr ""
 
-#: init.lua:69
+#: hot_rock.lua:8
+msgid "Hot stone riven with cracks and seeping traces of lava."
+msgstr ""
+
+#: hot_rock.lua:9
+msgid ""
+"When normal stone is heated by lava it is converted into this. Beware when "
+"digging here!"
+msgstr ""
+
+#: hot_rock.lua:19
 msgid "Hot Obsidian"
+msgstr ""
+
+#: hot_rock.lua:20
+msgid "Obsidian heated to a dull red glow."
+msgstr ""
+
+#: hot_rock.lua:21
+msgid ""
+"When normal obsidian is heated by lava it is converted into this. Beware "
+"when digging here!"
 msgstr ""

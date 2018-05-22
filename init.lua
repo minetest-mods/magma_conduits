@@ -1,16 +1,17 @@
 magma_conduits = {}
 
---grab a shorthand for the filepath of the mod
 local modpath = minetest.get_modpath(minetest.get_current_modname())
-
---load companion lua files
 dofile(modpath.."/config.lua")
 dofile(modpath.."/voxelarea_iterator.lua")
+dofile(modpath.."/hot_rock.lua")
 
 if magma_conduits.config.remove_default_lava then
 	minetest.register_alias_force("mapgen_lava_source", "air") -- veins of lava are far more realistic
 end
 
+-- Hard-coding on account of issue https://github.com/minetest/minetest/issues/7364
+local height_min = -31000 -- magma_conduits.config.lower_limit
+local height_max = 31000 --magma_conduits.config.upper_limit
 
 minetest.register_ore({
 	ore_type = "vein",
@@ -19,10 +20,6 @@ minetest.register_ore({
 		"default:stone",
 		"default:desert_stone",
 		"default:sandstone",
-		"default:sand",
-		"default:desert_sand",
-		"default:silver_sand",
-		"default:gravel",
 		"default:stone_with_coal",
 		"default:stone_with_iron",
 		"default:stone_with_copper",
@@ -33,11 +30,17 @@ minetest.register_ore({
 		"default:dirt_with_grass",
 		"default:dirt_with_dry_grass",
 		"default:dirt_with_snow",
-		},
+		"default:dirt_with_rainforest_litter",
+		"default:dirt_with_coniferous_litter",
+		"default:sand",
+		"default:desert_sand",
+		"default:silver_sand",
+		"default:gravel",
+	},
 	column_height_min = 2,
 	column_height_max = 6,
-	height_min = magma_conduits.config.lower_limit,
-	height_max = magma_conduits.config.upper_limit,
+	y_min = height_min,
+	y_max = height_max,
 	noise_threshold = 0.9,
 	noise_params = {
 		offset = 0,
@@ -51,98 +54,19 @@ minetest.register_ore({
 	random_factor = 0,
 })
 
-if magma_conduits.config.glowing_rock then
-
-local S, NS = dofile(modpath.."/intllib.lua")
-
-minetest.register_node("magma_conduits:hot_cobble", {
-	description = S("Hot Cobble"),
-	tiles = {"magma_conduits_hot_cobble.png"},
-	is_ground_content = false,
-	groups = {cracky = 3, stone = 2, hot=1},
-	sounds = default.node_sound_stone_defaults(),
-	light_source = 6,
-	drop = "default:cobble",
-})
-
-minetest.register_node("magma_conduits:glow_obsidian", {
-	description = S("Hot Obsidian"),
-	tiles = {"magma_conduits_glow_obsidian.png"},
-	is_ground_content = true,
-	sounds = default.node_sound_stone_defaults(),
-	groups = {cracky=1, hot=1, level=2},
-	light_source = 6,
-	drop = "default:obsidian",
-})
-
-minetest.register_abm{
-    label = "stone heating",
-	nodenames = {"default:stone", "default:cobble", "default:mossycobble"},
-	neighbors = {"default:lava_source", "default:lava_flowing"},
-	interval = 10,
-	chance = 5,
-	action = function(pos)
-		minetest.set_node(pos, {name = "magma_conduits:hot_cobble"})
-	end,
-}
-
-minetest.register_abm{
-    label = "obsidian heating",
-	nodenames = {"default:obsidian"},
-	neighbors = {"default:lava_source", "default:lava_flowing"},
-	interval = 10,
-	chance = 5,
-	action = function(pos)
-		minetest.set_node(pos, {name = "magma_conduits:glow_obsidian"})
-	end,
-}
-
-minetest.register_abm{
-    label = "stone cooling",
-	nodenames = {"magma_conduits:hot_cobble"},
-	interval = 100,
-	chance = 10,
-	action = function(pos)
-		if not minetest.find_node_near(pos, 2, {"default:lava_source", "default:lava_flowing"}, false) then
-			minetest.set_node(pos, {name = "default:cobble"})
-		end
-	end,
-}
-
-minetest.register_abm{
-    label = "obsidian cooling",
-	nodenames = {"magma_conduits:glow_obsidian"},
-	interval = 100,
-	chance = 10,
-	action = function(pos)
-		if not minetest.find_node_near(pos, 2, {"default:lava_source", "default:lava_flowing"}, false) then
-			minetest.set_node(pos, {name = "default:obsidian"})
-		end
-	end,
-}
-
-else
-
-minetest.register_alias("magma_conduits:hot_cobble", "default:cobble")
-minetest.register_alias("magma_conduits:glow_obsidian", "default:obsidian")
-
-end
-
-
 -------------------------------------------------------------------------------------------------
--- Ameliorate lava floods on the surface world by removing lava that's poised to spill
 
-if not (magma_conduits.config.ameliorate_floods or magma_conduits.config.obsidian_lining) then return end
+local water_level = tonumber(minetest.get_mapgen_setting("water_level"))
 
-local ameliorate_floods = magma_conduits.config.ameliorate_floods
+local lava_y_cutoff = magma_conduits.config.remove_lava_above
+-- if the y cutoff is at or below water level, ameliorate_floods is pointless.
+local ameliorate_floods = magma_conduits.config.ameliorate_floods and lava_y_cutoff > water_level
 local obsidian_lining = magma_conduits.config.obsidian_lining
 
 local c_air = minetest.get_content_id("air")
 local c_lava = minetest.get_content_id("default:lava_source")
 local c_stone = minetest.get_content_id("default:stone")
 local c_obsidian = minetest.get_content_id("default:obsidian")
-
-local water_level = tonumber(minetest.get_mapgen_setting("water_level"))
 
 local is_adjacent_to_air = function(area, data, x, y, z)
 	return (data[area:index(x+1, y, z)] == c_air
@@ -154,8 +78,8 @@ end
 
 local remove_unsupported_lava
 remove_unsupported_lava = function(area, data, vi, x, y, z)
-	--if too far from water level, abort. Caverns are on their own.
-	if y < water_level or y > 512 or not area:contains(x, y, z) then return end
+	--if below water level, abort. Caverns are on their own.
+	if y < water_level or y > lava_y_cutoff or not area:contains(x, y, z) then return end
 
 	if data[vi] == c_lava then
 		if is_adjacent_to_air(area, data, x, y, z) then
@@ -196,11 +120,15 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	vm:get_data(data)
 	
 	for vi, x, y, z in area:iterp_xyz(minp, maxp) do
-		if ameliorate_floods then
-			remove_unsupported_lava(area, data, vi, x, y, z)
-		end
-		if obsidian_lining then
-			obsidianize(area, data, vi, x, y, z, minp, maxp)
+		if y > lava_y_cutoff and data[vi] == c_lava then
+			data[vi] = c_air
+		else
+			if obsidian_lining then
+				obsidianize(area, data, vi, x, y, z, minp, maxp)
+			end
+			if ameliorate_floods then
+				remove_unsupported_lava(area, data, vi, x, y, z)
+			end
 		end
 	end
 		

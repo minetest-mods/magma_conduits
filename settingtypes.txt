@@ -1,7 +1,6 @@
 magma_conduits_spread (Approximate spacing between magma conduits) int 400
-magma_conduits_upper_limit (Upper extent of magma conduits) int 512
-magma_conduits_lower_limit (Lower extent of magma conduits) int -31000
 magma_conduits_ameliorate_floods (Ameliorate lava floods on the surface) bool true
 magma_conduits_obsidian_lining (Adds an obsidian lining to magma conduits) bool true
 magma_conduits_remove_default_lava (Remove default mapgen lava) bool true
 magma_conduits_glowing_rock (Cause rock adjacent to lava to convert into "glowing" form) bool true
+magma_conduits_remove_lava_above (Removes any lava above this y level) int 512
