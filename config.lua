@@ -29,6 +29,9 @@ setting("bool", "ameliorate_floods", true, "Ameliorate lava floods on the surfac
 setting("bool", "obsidian_lining", true, "Add an obsidian lining to magma conduits")
 setting("bool", "glowing_rock", true, "Cause rock adjacent to lava to convert into glowing form")
 setting("int", "remove_lava_above", 512, "Remove lava above this y level")
+setting("bool", "magma_veins", true, "Enable magma veins")
+setting("bool", "volcanoes", true, "Enable volcanoes")
+
 -- Removing this setting on account of issue https://github.com/minetest/minetest/issues/7364
 --setting("int", "upper_limit", 512, "Upper extent of magma conduits")
 --setting("int", "lower_limit", -31000, "Lower extent of magma conduits")
