@@ -3,12 +3,14 @@ local depth_base = -50
 local depth_maxwidth = -10
 local depth_maxpeak = 200
 local depth_minpeak = 20
-local radius_vent = 5
-local radius_lining = 7
-local slope_min = 0.25
-local slope_max = 1.75
+local radius_vent = 3
+local radius_lining = 5
+local caldera_min = 5
+local caldera_max = 20
+local slope_min = 0.5
+local slope_max = 1.5
 local chunk_size = 1000
-	
+
 local c_air = minetest.get_content_id("air")
 local c_lava = minetest.get_content_id("default:lava_source")
 local c_lining = minetest.get_content_id("default:obsidian")
@@ -52,11 +54,12 @@ local get_volcano = function(pos)
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava = math.random(depth_peak - 50, depth_peak)
 	local slope = math.random() * (slope_max - slope_min) + slope_min
+	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
 	
 	local state = math.random()
 	
 	math.randomseed(next_seed)
-	return {location = location, depth_peak = depth_peak, depth_lava = depth_lava, slope = slope, state = state}
+	return {location = location, depth_peak = depth_peak, depth_lava = depth_lava, slope = slope, state = state, caldera = caldera}
 end
 
 local perlin_params = {
@@ -72,11 +75,10 @@ local nobj_perlin = nil
 local data = {}
 
 minetest.register_on_generated(function(minp, maxp, seed)
-	
 	if minp.y > depth_maxpeak then
 		return
 	end
-
+	
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
 	vm:get_data(data)
@@ -99,6 +101,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	local z_coord = volcano.location.z
 	local depth_lava = volcano.depth_lava
 	local depth_peak = volcano.depth_peak
+	local caldera = volcano.caldera
 	local base_radius = (depth_peak - depth_maxwidth) * volcano.slope + radius_lining
 	
 	local state = volcano.state
@@ -145,7 +148,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 			if distance < radius_vent then
 				data[vi] = pipestuff
 			elseif distance < radius_lining then
-				if data[vi] == c_stone or data[vi] == c_water then
+				if data[vi] ~= c_air then
 					data[vi] = liningstuff
 				end
 			end
@@ -156,9 +159,9 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				data[vi] = liningstuff
 			elseif distance < radius_lining + ((y - depth_base)/depth_maxwidth_dist) * base_radius then
 				data[vi] = c_cone
-			end		
-		elseif y < depth_peak then -- cone
-			if vector.distance({x=x, y=y, z=z}, {x=x_coord, y=depth_peak, z=z_coord}) - distance_perturbation < radius_lining * 2.5 then
+			end
+		elseif y < depth_peak + 5 then -- cone
+			if y > depth_peak - caldera and distance < (y - depth_peak + caldera) and data[vi] ~= c_lava then
 				data[vi] = c_air -- caldera
 			elseif distance < radius_vent then
 				data[vi] = pipestuff

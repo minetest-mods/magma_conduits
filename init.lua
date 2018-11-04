@@ -9,6 +9,10 @@ if magma_conduits.config.remove_default_lava then
 	minetest.register_alias_force("mapgen_lava_source", "air")
 end
 
-dofile(modpath.."/magma_veins.lua")
-dofile(modpath.."/volcanoes.lua")
+if magma_conduits.config.magma_veins then
+	dofile(modpath.."/magma_veins.lua")
+end
+if magma_conduits.config.volcanoes then
+	dofile(modpath.."/volcanoes.lua")
+end
 
