@@ -1,6 +1,6 @@
 local depth_root = -3000
 local depth_base = -50
-local depth_maxwidth = -10
+local depth_maxwidth = -10 -- TODO: setting this to -30 results in a broadened peak, shouldn't be the case
 local depth_maxpeak = 200
 local depth_minpeak = 20
 local radius_vent = 3
@@ -13,20 +13,22 @@ local chunk_size = 1000
 
 local c_air = minetest.get_content_id("air")
 local c_lava = minetest.get_content_id("default:lava_source")
+local c_water = minetest.get_content_id("default:water_source")
+--local c_stone = minetest.get_content_id("default:stone")
+
 local c_lining = minetest.get_content_id("default:obsidian")
 local c_hot_lining = minetest.get_content_id("default:obsidian")
 local c_cone = minetest.get_content_id("default:stone")
 local c_ash = minetest.get_content_id("default:gravel")
 local c_soil = minetest.get_content_id("default:dirt_with_grass")
+local c_underwater_soil = minetest.get_content_id("default:sand")
 local c_plug = minetest.get_content_id("default:obsidian")
-
-local c_stone = minetest.get_content_id("default:stone")
-local c_water = minetest.get_content_id("default:water_source")
 
 if magma_conduits.config.glowing_rock then
 	c_hot_lining = minetest.get_content_id("magma_conduits:glow_obsidian")
 end
 
+local water_level = tonumber(minetest.get_mapgen_setting("water_level"))
 local mapgen_seed = tonumber(minetest.get_mapgen_setting("seed"))
 
 -- derived values
@@ -106,13 +108,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	
 	local state = volcano.state
 	
-	local dirtstuff
-	if state < 0.5 then
-		dirtstuff = c_soil
-	else
-		dirtstuff = c_ash
-	end
-	
 	for vi, x, y, z in area:iterp_xyz(minp, maxp) do
 
 		local vi3d = noise_iterator()
@@ -124,6 +119,17 @@ minetest.register_on_generated(function(minp, maxp, seed)
 			return
 		end
 
+		local dirtstuff
+		if state < 0.5 then
+			if y < water_level then
+				dirtstuff = c_underwater_soil
+			else
+				dirtstuff = c_soil
+			end
+		else
+			dirtstuff = c_ash
+		end
+		
 		local pipestuff
 		local liningstuff
 		if y < depth_lava + math.random() * 1.1 then
@@ -148,7 +154,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 			if distance < radius_vent then
 				data[vi] = pipestuff
 			elseif distance < radius_lining then
-				if data[vi] ~= c_air then
+				if data[vi] ~= c_air and data[vi] ~= c_lava then -- leave holes into caves and into existing lava
 					data[vi] = liningstuff
 				end
 			end
@@ -176,8 +182,8 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	
 	end
 	
-	--minetest.generate_decorations(vm, minp, maxp)
-	--minetest.generate_ores(vm, minp, maxp)
+	minetest.generate_decorations(vm, minp, maxp)
+	minetest.generate_ores(vm, minp, maxp)
 		
 	--send data back to voxelmanip
 	vm:set_data(data)
