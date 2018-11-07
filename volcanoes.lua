@@ -1,15 +1,17 @@
-local depth_root = -3000
-local depth_base = -50
-local depth_maxwidth = -10 -- TODO: setting this to -30 results in a broadened peak, shouldn't be the case
-local depth_maxpeak = 200
-local depth_minpeak = 20
-local radius_vent = 3
-local radius_lining = 5
-local caldera_min = 5
-local caldera_max = 20
-local slope_min = 0.5
-local slope_max = 1.5
+local depth_root = -3000 -- TODO: should add some kind of optional magma chamber down there
+local depth_base = -50 -- point where the mountain root starts expanding
+local depth_maxwidth = -30 -- point of maximum width
+local depth_maxpeak = 200 -- absolute y value of highest mountain top
+local depth_minpeak = 20 -- absolute y value of lowest mountain top.
+local radius_vent = 3 -- approximate minimum radius of vent - noise adds a lot to this
+local radius_lining = 5 -- the difference between this and the vent radius is about how thick the layer of lining nodes is, though noise will affect it
+local caldera_min = 5 -- minimum radius of caldera
+local caldera_max = 20 -- maximum radius of caldera
+local slope_min = 0.5 -- smaller slopes are steeper. 0.5 is probably the lowest this should go, things get unrealistic around there
+local slope_max = 1.5 -- above 1.5 and the mountain becomes more of a shield volcano, taking up a lot of map area.
 local chunk_size = 1000
+
+local snow_line = 120 -- above this elevation snow is added to the dirt type
 
 local c_air = minetest.get_content_id("air")
 local c_lava = minetest.get_content_id("default:lava_source")
@@ -19,8 +21,12 @@ local c_water = minetest.get_content_id("default:water_source")
 local c_lining = minetest.get_content_id("default:obsidian")
 local c_hot_lining = minetest.get_content_id("default:obsidian")
 local c_cone = minetest.get_content_id("default:stone")
+
 local c_ash = minetest.get_content_id("default:gravel")
 local c_soil = minetest.get_content_id("default:dirt_with_grass")
+local c_soil_snow = minetest.get_content_id("default:dirt_with_snow")
+local c_snow = minetest.get_content_id("default:snow")
+
 local c_underwater_soil = minetest.get_content_id("default:sand")
 local c_plug = minetest.get_content_id("default:obsidian")
 
@@ -53,12 +59,13 @@ local get_volcano = function(pos)
 	math.randomseed(corner_xz.x + corner_xz.z * 2 ^ 8 + mapgen_seed)
 
 	local location = scatter_2d(corner_xz, chunk_size, radius_cone_max)
+	--local location = {x=corner_xz.x+chunk_size/2, z = corner_xz.z+chunk_size/2} -- For testing, puts volcanoes in a consistent grid
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava = math.random(depth_peak - 50, depth_peak)
 	local slope = math.random() * (slope_max - slope_min) + slope_min
 	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
 	
-	local state = math.random()
+	local state = math.random() -- 0-0.25 = extinct, 0.25-0.5 = dormant, 0.5-1.0 active
 	
 	math.randomseed(next_seed)
 	return {location = location, depth_peak = depth_peak, depth_lava = depth_lava, slope = slope, state = state, caldera = caldera}
@@ -77,7 +84,7 @@ local nobj_perlin = nil
 local data = {}
 
 minetest.register_on_generated(function(minp, maxp, seed)
-	if minp.y > depth_maxpeak then
+	if minp.y > depth_maxpeak or maxp.y < depth_root then
 		return
 	end
 	
@@ -97,7 +104,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 
 	local volcano = get_volcano(minp)
 	
-	minetest.debug(dump(volcano))
+	--minetest.debug(dump(volcano))
 	
 	local x_coord = volcano.location.x
 	local z_coord = volcano.location.z
@@ -123,8 +130,10 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		if state < 0.5 then
 			if y < water_level then
 				dirtstuff = c_underwater_soil
-			else
+			elseif y < snow_line then
 				dirtstuff = c_soil
+			else
+				dirtstuff = c_soil_snow
 			end
 		else
 			dirtstuff = c_ash
@@ -167,23 +176,29 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				data[vi] = c_cone
 			end
 		elseif y < depth_peak + 5 then -- cone
-			if y > depth_peak - caldera and distance < (y - depth_peak + caldera) and data[vi] ~= c_lava then
+			local current_elevation = y - depth_maxwidth
+			local peak_elevation = depth_peak - depth_maxwidth
+			if current_elevation > peak_elevation - caldera and distance < current_elevation - peak_elevation + caldera and data[vi] ~= c_lava then
 				data[vi] = c_air -- caldera
 			elseif distance < radius_vent then
 				data[vi] = pipestuff
 			elseif distance < radius_lining then
 				data[vi] = liningstuff
-			elseif distance < y * -volcano.slope + base_radius then
+			elseif distance <  current_elevation * -volcano.slope + base_radius then
 				data[vi] = c_cone
-			elseif distance < y * -volcano.slope + base_radius + nvals_perlin[vi3d]*-4 then
+			elseif distance < current_elevation * -volcano.slope + base_radius + nvals_perlin[vi3d]*-4 then
 				data[vi] = dirtstuff
+				if y >= snow_line then
+					data[vi + area.ystride] = c_snow -- generation advances in a positive y direction so this should be safe
+				end
 			end
-		end	
+		end
 	
 	end
 	
-	minetest.generate_decorations(vm, minp, maxp)
-	minetest.generate_ores(vm, minp, maxp)
+	-- These don't seem to work?
+	--minetest.generate_decorations(vm, minp, maxp)
+	--minetest.generate_ores(vm, minp, maxp)
 		
 	--send data back to voxelmanip
 	vm:set_data(data)
