@@ -12,20 +12,22 @@ local slope_max = 1.5 -- above 1.5 and the mountain becomes more of a shield vol
 local chunk_size = 1000
 
 local snow_line = 120 -- above this elevation snow is added to the dirt type
+local snow_border = 15 -- transitional zone where there's dirt with snow on it
 
 local c_air = minetest.get_content_id("air")
 local c_lava = minetest.get_content_id("default:lava_source")
 local c_water = minetest.get_content_id("default:water_source")
---local c_stone = minetest.get_content_id("default:stone")
 
 local c_lining = minetest.get_content_id("default:obsidian")
 local c_hot_lining = minetest.get_content_id("default:obsidian")
 local c_cone = minetest.get_content_id("default:stone")
 
 local c_ash = minetest.get_content_id("default:gravel")
-local c_soil = minetest.get_content_id("default:dirt_with_grass")
+local c_soil = minetest.get_content_id("default:dirt")
+local c_soil_grass = minetest.get_content_id("default:dirt_with_grass")
 local c_soil_snow = minetest.get_content_id("default:dirt_with_snow")
 local c_snow = minetest.get_content_id("default:snow")
+local c_snow_block = minetest.get_content_id("default:snowblock")
 
 local c_underwater_soil = minetest.get_content_id("default:sand")
 local c_plug = minetest.get_content_id("default:obsidian")
@@ -87,31 +89,32 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	if minp.y > depth_maxpeak or maxp.y < depth_root then
 		return
 	end
+
+	local volcano = get_volcano(minp)
+	local depth_peak = volcano.depth_peak
+	local base_radius = (depth_peak - depth_maxwidth) * volcano.slope + radius_lining
+	local sidelen = maxp.x - minp.x + 1 --length of a mapblock
+
+	-- early out if the volcano is too far away to matter
+	if vector.distance(volcano.location, {x=minp.x+sidelen/2, y=0, z=minp.z+sidelen/2}) > base_radius * 2.5 then
+		return
+	end
 	
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
 	vm:get_data(data)
 	
-	local minx = minp.x
-	local minz = minp.z
-	local sidelen = maxp.x - minp.x + 1 --length of a mapblock
 	local chunk_lengths = {x = sidelen, y = sidelen, z = sidelen} --table of chunk edges
 
 	nobj_perlin = nobj_perlin or minetest.get_perlin_map(perlin_params, chunk_lengths)
 	local nvals_perlin = nobj_perlin:get3dMap_flat(minp, nvals_perlin_buffer) -- switch to get_3d_map_flat for minetest v0.5
 	local noise_area = VoxelArea:new{MinEdge=minp, MaxEdge=maxp}
 	local noise_iterator = noise_area:iterp(minp, maxp)
-
-	local volcano = get_volcano(minp)
-	
-	--minetest.debug(dump(volcano))
 	
 	local x_coord = volcano.location.x
 	local z_coord = volcano.location.z
 	local depth_lava = volcano.depth_lava
-	local depth_peak = volcano.depth_peak
 	local caldera = volcano.caldera
-	local base_radius = (depth_peak - depth_maxwidth) * volcano.slope + radius_lining
 	
 	local state = volcano.state
 	
@@ -121,19 +124,20 @@ minetest.register_on_generated(function(minp, maxp, seed)
 
 		local distance_perturbation = (nvals_perlin[vi3d]+1)*10
 		local distance = vector.distance({x=x, y=y, z=z}, {x=x_coord, y=y, z=z_coord}) - distance_perturbation
-		
-		if distance > base_radius * 2.5 then
-			return
-		end
 
 		local dirtstuff
+		local replace_soil = false -- determines if the soil type should be replaced with c_soil if there's layers on top of it
 		if state < 0.5 then
 			if y < water_level then
 				dirtstuff = c_underwater_soil
 			elseif y < snow_line then
-				dirtstuff = c_soil
-			else
+				dirtstuff = c_soil_grass
+				replace_soil = true
+			elseif y < snow_line + snow_border then
 				dirtstuff = c_soil_snow
+				replace_soil = true
+			else
+				dirtstuff = c_snow_block
 			end
 		else
 			dirtstuff = c_ash
@@ -188,8 +192,13 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				data[vi] = c_cone
 			elseif distance < current_elevation * -volcano.slope + base_radius + nvals_perlin[vi3d]*-4 then
 				data[vi] = dirtstuff
+				if replace_soil and data[vi - area.ystride] == dirtstuff then
+					data[vi - area.ystride] = c_soil -- soil underneath a layer of other soil shouldn't have grass on top
+				end
 				if y >= snow_line then
-					data[vi + area.ystride] = c_snow -- generation advances in a positive y direction so this should be safe
+					if data[vi + area.ystride] == c_air then
+						data[vi + area.ystride] = c_snow -- generation advances in a positive y direction so this will be overwritten if more solid stuff is placed above
+					end
 				end
 			end
 		end
