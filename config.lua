@@ -30,7 +30,12 @@ setting("bool", "obsidian_lining", true, "Add an obsidian lining to magma condui
 setting("bool", "glowing_rock", true, "Cause rock adjacent to lava to convert into glowing form")
 setting("int", "remove_lava_above", 512, "Remove lava above this y level")
 setting("bool", "magma_veins", true, "Enable magma veins")
+
 setting("bool", "volcanoes", true, "Enable volcanoes")
+setting("int", "volcano_min_height", 20, "Minimum volcano peak")
+setting("int", "volcano_max_height", 200, "Maximum volcano peak")
+setting("float", "volcano_min_slope", 0.5, "Minimum volcano slope")
+setting("float", "volcano_max_slope", 1.5, "Maximum volcano slope")
 
 -- Removing this setting on account of issue https://github.com/minetest/minetest/issues/7364
 --setting("int", "upper_limit", 512, "Upper extent of magma conduits")

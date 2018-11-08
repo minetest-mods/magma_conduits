@@ -1,18 +1,24 @@
 local depth_root = -3000 -- TODO: should add some kind of optional magma chamber down there
 local depth_base = -50 -- point where the mountain root starts expanding
 local depth_maxwidth = -30 -- point of maximum width
-local depth_maxpeak = 200 -- absolute y value of highest mountain top
-local depth_minpeak = 20 -- absolute y value of lowest mountain top.
+
 local radius_vent = 3 -- approximate minimum radius of vent - noise adds a lot to this
 local radius_lining = 5 -- the difference between this and the vent radius is about how thick the layer of lining nodes is, though noise will affect it
 local caldera_min = 5 -- minimum radius of caldera
 local caldera_max = 20 -- maximum radius of caldera
-local slope_min = 0.5 -- smaller slopes are steeper. 0.5 is probably the lowest this should go, things get unrealistic around there
-local slope_max = 1.5 -- above 1.5 and the mountain becomes more of a shield volcano, taking up a lot of map area.
 local chunk_size = 1000
 
 local snow_line = 120 -- above this elevation snow is added to the dirt type
 local snow_border = 15 -- transitional zone where there's dirt with snow on it
+
+local state_extinct = 0.25
+local state_dormant = 0.5
+
+local depth_maxpeak = magma_conduits.config.volcano_max_height
+local depth_minpeak = magma_conduits.config.volcano_min_height
+local slope_min = magma_conduits.config.volcano_min_slope
+local slope_max = magma_conduits.config.volcano_max_slope
+
 
 local c_air = minetest.get_content_id("air")
 local c_lava = minetest.get_content_id("default:lava_source")
@@ -63,7 +69,7 @@ local get_volcano = function(pos)
 	local location = scatter_2d(corner_xz, chunk_size, radius_cone_max)
 	--local location = {x=corner_xz.x+chunk_size/2, z = corner_xz.z+chunk_size/2} -- For testing, puts volcanoes in a consistent grid
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
-	local depth_lava = math.random(depth_peak - 50, depth_peak)
+	local depth_lava = math.random(depth_peak - 25, depth_peak)
 	local slope = math.random() * (slope_max - slope_min) + slope_min
 	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
 	
@@ -127,7 +133,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 
 		local dirtstuff
 		local replace_soil = false -- determines if the soil type should be replaced with c_soil if there's layers on top of it
-		if state < 0.5 then
+		if state < state_dormant then
 			if y < water_level then
 				dirtstuff = c_underwater_soil
 			elseif y < snow_line then
@@ -146,7 +152,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		local pipestuff
 		local liningstuff
 		if y < depth_lava + math.random() * 1.1 then
-			if state < 0.25 then
+			if state < state_extinct then
 				pipestuff = c_plug -- extinct volcano
 				liningstuff = c_lining
 			else
@@ -154,7 +160,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				liningstuff = c_hot_lining
 			end
 		else
-			if state < 0.5 then
+			if state < state_dormant then
 				pipestuff = c_plug -- dormant volcano
 				liningstuff = c_lining
 			else
@@ -182,7 +188,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		elseif y < depth_peak + 5 then -- cone
 			local current_elevation = y - depth_maxwidth
 			local peak_elevation = depth_peak - depth_maxwidth
-			if current_elevation > peak_elevation - caldera and distance < current_elevation - peak_elevation + caldera and data[vi] ~= c_lava then
+			if current_elevation > peak_elevation - caldera and distance < current_elevation - peak_elevation + caldera then
 				data[vi] = c_air -- caldera
 			elseif distance < radius_vent then
 				data[vi] = pipestuff
@@ -218,3 +224,36 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	--write it to world
 	vm:write_to_map()
 end)
+
+minetest.register_privilege("findvolcano", { description = "Allows players to use a console command to find the nearest volcano", give_to_singleplayer = false})
+
+minetest.register_chatcommand("findvolcano", {
+    params = "pos", -- Short parameter description
+    description = "find the volcano in the player's map region, or in the map region containing pos if provided",
+    func = function(name, param)
+		if minetest.check_player_privs(name, {findvolcano = true}) then
+			pos = tonumber(param)
+			if pos ~= nil then
+				--TODO
+				return true
+			else
+				playerobj = minetest.get_player_by_name(name)
+				volcano = get_volcano(playerobj:get_pos())
+				text = "Nearest volcano is at " .. minetest.pos_to_string(volcano.location, 0)
+					.. "\nHeight: " .. tostring(volcano.depth_peak) .. " Slope: " .. tostring(volcano.slope)
+					.. "\nState: "
+				if volcano.state < state_extinct then
+					text = text .. "Extinct"
+				elseif volcano.state < state_dormant then
+					text = text .. "Dormant"
+				else
+					text = text .. "Active"
+				end
+				minetest.chat_send_player(name, text)
+				return true
+			end
+		else
+			return false, "You need the findvolcano privilege to use this command."
+		end
+	end,
+})

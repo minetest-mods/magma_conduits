@@ -1,8 +1,25 @@
-magma_conduits_spread (Approximate spacing between magma conduits) int 400
-magma_conduits_ameliorate_floods (Ameliorate lava floods on the surface) bool true
-magma_conduits_obsidian_lining (Adds an obsidian lining to magma conduits) bool true
-magma_conduits_remove_default_lava (Remove default mapgen lava) bool true
 magma_conduits_glowing_rock (Cause rock adjacent to lava to convert into "glowing" form) bool true
-magma_conduits_remove_lava_above (Removes any lava above this y level) int 512
+magma_conduits_remove_default_lava (Remove default mapgen lava) bool true
+
+[Magma Veins]
+#If this is false none of the other settings in this section apply
 magma_conduits_magma_veins (Enable magma veins) bool true
+magma_conduits_spread (Approximate spacing between magma conduits) int 400
+magma_conduits_obsidian_lining (Add an obsidian lining to magma conduits) bool true
+#This is useful for preventing magma conduits from being placed in floatlands
+magma_conduits_remove_lava_above (Remove any lava above this y level) int 512
+#Removes magma near the surface that could spill out of an open magma vein onto
+#surrounding terrain
+magma_conduits_ameliorate_floods (Ameliorate lava floods on the surface) bool true
+
+[Volcanoes]
+#If this is false none of the other settings in this section apply
 magma_conduits_volcanoes (Enable volcanoes) bool true
+magma_conduits_volcano_min_height (Minimum volcano peak elevation) int 20
+magma_conduits_volcano_max_height (Maximum volcano peak elevation) int 200
+#smaller slopes are steeper. 0.5 is probably the lowest this should go,
+#things get unrealistic around there
+magma_conduits_volcano_min_slope (Minimum volcano slope) float 0.5
+#above 1.5 and the mountain becomes more of a shield volcano,
+#taking up a lot of map area.
+magma_conduits_volcano_max_slope (Maximum volcano slope) float 1.5
