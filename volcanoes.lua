@@ -6,7 +6,8 @@ local radius_vent = 3 -- approximate minimum radius of vent - noise adds a lot t
 local radius_lining = 5 -- the difference between this and the vent radius is about how thick the layer of lining nodes is, though noise will affect it
 local caldera_min = 5 -- minimum radius of caldera
 local caldera_max = 20 -- maximum radius of caldera
-local chunk_size = 1000
+local chunk_size = nil
+local region_mapblocks = 13
 
 local snow_line = 120 -- above this elevation snow is added to the dirt type
 local snow_border = 15 -- transitional zone where there's dirt with snow on it
@@ -96,13 +97,22 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		return
 	end
 
+	local sidelen = maxp.x - minp.x + 1 --length of a mapblock
+	
+	if not chunk_size then -- TODO: just look up map block size from settings
+		chunk_size = region_mapblocks * sidelen
+	end
+	
 	local volcano = get_volcano(minp)
 	local depth_peak = volcano.depth_peak
 	local base_radius = (depth_peak - depth_maxwidth) * volcano.slope + radius_lining
-	local sidelen = maxp.x - minp.x + 1 --length of a mapblock
 
 	-- early out if the volcano is too far away to matter
-	if vector.distance(volcano.location, {x=minp.x+sidelen/2, y=0, z=minp.z+sidelen/2}) > base_radius * 2.5 then
+	if	vector.distance(volcano.location, {x=minp.x, y=0, z=minp.z}) > base_radius + 20 and 
+		vector.distance(volcano.location, {x=maxp.x, y=0, z=minp.z}) > base_radius + 20 and 
+		vector.distance(volcano.location, {x=maxp.x, y=0, z=maxp.z}) > base_radius + 20 and 
+		vector.distance(volcano.location, {x=minp.x, y=0, z=maxp.z}) > base_radius + 20
+	then
 		return
 	end
 	
@@ -225,31 +235,42 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	vm:write_to_map()
 end)
 
-minetest.register_privilege("findvolcano", { description = "Allows players to use a console command to find the nearest volcano", give_to_singleplayer = false})
+----------------------------------------------------------------------------------------------
+-- Debugging and sightseeing commands
+
+minetest.register_privilege("findvolcano", { description = "Allows players to use a console command to find volcanoes", give_to_singleplayer = false})
+
+local send_volcano_state = function(pos, name)
+	volcano = get_volcano(pos)
+	text = "Nearest volcano is at " .. minetest.pos_to_string(volcano.location, 0)
+		.. "\nHeight: " .. tostring(volcano.depth_peak) .. " Slope: " .. tostring(volcano.slope)
+		.. "\nState: "
+	if volcano.state < state_extinct then
+		text = text .. "Extinct"
+	elseif volcano.state < state_dormant then
+		text = text .. "Dormant"
+	else
+		text = text .. "Active"
+	end
+	minetest.chat_send_player(name, text)
+end
 
 minetest.register_chatcommand("findvolcano", {
     params = "pos", -- Short parameter description
     description = "find the volcano in the player's map region, or in the map region containing pos if provided",
     func = function(name, param)
 		if minetest.check_player_privs(name, {findvolcano = true}) then
-			pos = tonumber(param)
-			if pos ~= nil then
-				--TODO
+			local pos = {}
+			pos.x, pos.y, pos.z = string.match(param, "^([%d.-]+)[, ] *([%d.-]+)[, ] *([%d.-]+)$")
+			pos.x = tonumber(pos.x)
+			pos.y = tonumber(pos.y)
+			pos.z = tonumber(pos.z)
+			if pos.x and pos.y and pos.z then
+				send_volcano_state(pos, name)
 				return true
 			else
 				playerobj = minetest.get_player_by_name(name)
-				volcano = get_volcano(playerobj:get_pos())
-				text = "Nearest volcano is at " .. minetest.pos_to_string(volcano.location, 0)
-					.. "\nHeight: " .. tostring(volcano.depth_peak) .. " Slope: " .. tostring(volcano.slope)
-					.. "\nState: "
-				if volcano.state < state_extinct then
-					text = text .. "Extinct"
-				elseif volcano.state < state_dormant then
-					text = text .. "Dormant"
-				else
-					text = text .. "Active"
-				end
-				minetest.chat_send_player(name, text)
+				send_volcano_state(playerobj:get_pos(), name)
 				return true
 			end
 		else
