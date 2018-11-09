@@ -43,7 +43,7 @@ setting("bool", "ameliorate_floods", true, "Ameliorate lava floods on the surfac
 setting("bool", "volcanoes", true, "Enable volcanoes")
 setting("int", "volcano_min_height", 20, "Minimum volcano peak")
 setting("int", "volcano_max_height", 200, "Maximum volcano peak")
-setting("float", "volcano_min_slope", 0.5, "Minimum volcano slope")
+setting("float", "volcano_min_slope", 0.75, "Minimum volcano slope")
 setting("float", "volcano_max_slope", 1.5, "Maximum volcano slope")
 setting("int", "volcano_region_mapblocks", 15, "Map blocks per chunk")
 

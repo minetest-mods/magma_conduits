@@ -20,7 +20,7 @@ magma_conduits_volcano_min_height (Minimum volcano peak elevation) int 20
 magma_conduits_volcano_max_height (Maximum volcano peak elevation) int 200
 #smaller slopes are steeper. 0.5 is probably the lowest this should go,
 #things get unrealistic around there
-magma_conduits_volcano_min_slope (Minimum volcano slope) float 0.5
+magma_conduits_volcano_min_slope (Minimum volcano slope) float 0.75
 #above 1.5 and the mountain becomes more of a shield volcano,
 #taking up a lot of map area.
 magma_conduits_volcano_max_slope (Maximum volcano slope) float 1.5
