@@ -1,4 +1,5 @@
 magma_conduits_glowing_rock (Cause rock adjacent to lava to convert into "glowing" form) bool true
+magma_conduits_cook_soil (Cause soil and carbonaceous ores adjacent to lava to cook) bool true
 magma_conduits_remove_default_lava (Remove default mapgen lava) bool true
 
 [Magma Veins]
@@ -23,3 +24,12 @@ magma_conduits_volcano_min_slope (Minimum volcano slope) float 0.5
 #above 1.5 and the mountain becomes more of a shield volcano,
 #taking up a lot of map area.
 magma_conduits_volcano_max_slope (Maximum volcano slope) float 1.5
+#The size of the region within which each volcano is randomly placed
+#measured in mapblocks, which is usually 80 nodes on a side.
+#Eg, the default of 15 means that one volcano is placed in each
+#1200x1200 node region.
+magma_conduits_volcano_region_mapblocks (Region mapblocks) int 15
+
+magma_conduits_volcano_probability_active (Probability of active volcano in region) float 0.4
+magma_conduits_volcano_probability_dormant (Probability of dormant volcano in region) float 0.2
+magma_conduits_volcano_probability_extinct (Probability of extinct volcano in region) float 0.2

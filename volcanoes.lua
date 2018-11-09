@@ -6,20 +6,31 @@ local radius_vent = 3 -- approximate minimum radius of vent - noise adds a lot t
 local radius_lining = 5 -- the difference between this and the vent radius is about how thick the layer of lining nodes is, though noise will affect it
 local caldera_min = 5 -- minimum radius of caldera
 local caldera_max = 20 -- maximum radius of caldera
-local chunk_size = nil
-local region_mapblocks = 13
 
 local snow_line = 120 -- above this elevation snow is added to the dirt type
 local snow_border = 15 -- transitional zone where there's dirt with snow on it
-
-local state_extinct = 0.25
-local state_dormant = 0.5
 
 local depth_maxpeak = magma_conduits.config.volcano_max_height
 local depth_minpeak = magma_conduits.config.volcano_min_height
 local slope_min = magma_conduits.config.volcano_min_slope
 local slope_max = magma_conduits.config.volcano_max_slope
 
+local region_mapblocks = magma_conduits.config.volcano_region_mapblocks
+local mapgen_chunksize = tonumber(minetest.get_mapgen_setting("chunksize"))
+local volcano_region_size = region_mapblocks * mapgen_chunksize * 16
+
+
+local p_active = magma_conduits.config.volcano_probability_active
+local p_dormant = magma_conduits.config.volcano_probability_dormant
+local p_extinct = magma_conduits.config.volcano_probability_extinct
+
+if p_active + p_dormant + p_extinct > 1.0 then
+	minetest.log("error", "[magma_conduits] probabilities of various volcano types adds up to more than 1")
+end
+
+local state_dormant = 1 - p_active
+local state_extinct = 1 - p_active - p_dormant
+local state_none = 1 - p_active - p_dormant - p_extinct
 
 local c_air = minetest.get_content_id("air")
 local c_lava = minetest.get_content_id("default:lava_source")
@@ -62,20 +73,24 @@ local scatter_2d = function(min_xz, gridscale, border_width)
 end
 
 local get_volcano = function(pos)
-	local corner_xz = {x = math.floor(pos.x / chunk_size) * chunk_size, z = math.floor(pos.z / chunk_size) * chunk_size}
+	local corner_xz = {x = math.floor(pos.x / volcano_region_size) * volcano_region_size, z = math.floor(pos.z / volcano_region_size) * volcano_region_size}
 
 	local next_seed = math.random(1, 1000000000)
 	math.randomseed(corner_xz.x + corner_xz.z * 2 ^ 8 + mapgen_seed)
 
-	local location = scatter_2d(corner_xz, chunk_size, radius_cone_max)
-	--local location = {x=corner_xz.x+chunk_size/2, z = corner_xz.z+chunk_size/2} -- For testing, puts volcanoes in a consistent grid
+	local state = math.random()
+	if state < state_none then
+		math.randomseed(next_seed)
+		return nil
+	end
+	
+	local location = scatter_2d(corner_xz, volcano_region_size, radius_cone_max)
+	--local location = {x=corner_xz.x+volcano_region_size/2, z = corner_xz.z+volcano_region_size/2} -- For testing, puts volcanoes in a consistent grid
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava = math.random(depth_peak - 25, depth_peak)
 	local slope = math.random() * (slope_max - slope_min) + slope_min
 	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
-	
-	local state = math.random() -- 0-0.25 = extinct, 0.25-0.5 = dormant, 0.5-1.0 active
-	
+		
 	math.randomseed(next_seed)
 	return {location = location, depth_peak = depth_peak, depth_lava = depth_lava, slope = slope, state = state, caldera = caldera}
 end
@@ -98,12 +113,13 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	end
 
 	local sidelen = maxp.x - minp.x + 1 --length of a mapblock
+
+	local volcano = get_volcano(minp)
 	
-	if not chunk_size then -- TODO: just look up map block size from settings
-		chunk_size = region_mapblocks * sidelen
+	if volcano == nil then
+		return -- no volcano in this map region
 	end
 	
-	local volcano = get_volcano(minp)
 	local depth_peak = volcano.depth_peak
 	local base_radius = (depth_peak - depth_maxwidth) * volcano.slope + radius_lining
 
@@ -241,8 +257,19 @@ end)
 minetest.register_privilege("findvolcano", { description = "Allows players to use a console command to find volcanoes", give_to_singleplayer = false})
 
 local send_volcano_state = function(pos, name)
+
+	local xmin = math.floor(pos.x / volcano_region_size) * volcano_region_size
+	local zmin = math.floor(pos.z / volcano_region_size) * volcano_region_size
+	
+	local text = "In region (" .. tostring(xmin) .. ", 0, " .. tostring(zmin) ..") to ("
+		.. tostring(xmin+volcano_region_size) .. ", 0, " .. tostring(zmin+volcano_region_size) ..")\n"
+
 	volcano = get_volcano(pos)
-	text = "Nearest volcano is at " .. minetest.pos_to_string(volcano.location, 0)
+	if volcano == nil then
+		minetest.chat_send_player(name, text.."No volcano present")
+		return
+	end
+	text = text .. "Nearest volcano is at " .. minetest.pos_to_string(volcano.location, 0)
 		.. "\nHeight: " .. tostring(volcano.depth_peak) .. " Slope: " .. tostring(volcano.slope)
 		.. "\nState: "
 	if volcano.state < state_extinct then

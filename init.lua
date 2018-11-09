@@ -15,4 +15,7 @@ end
 if magma_conduits.config.volcanoes then
 	dofile(modpath.."/volcanoes.lua")
 end
+if magma_conduits.config.cook_soil then
+	dofile(modpath.."/cook_soil.lua")
+end
 
