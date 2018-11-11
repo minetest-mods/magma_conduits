@@ -57,9 +57,16 @@ end
 local water_level = tonumber(minetest.get_mapgen_setting("water_level"))
 local mapgen_seed = tonumber(minetest.get_mapgen_setting("seed"))
 
+-- Mapgen v7 has a bizzare glitch where it will sometimes cut slices out of the generated volcano
+-- cone *after* mapgen is finished. The slices are taken at maxp.y or minp.y and resemble
+-- the curvy form of a vein or a cave that's one node tall.
+-- Some annoying hackery is needed to patch those slices back up
+-- again, and I only want to do that hackery if we're actually in mapgen v7.
+local mg_name = minetest.get_mapgen_setting("mg_name")
+
 -- derived values
 
-local radius_cone_max = (depth_maxpeak-depth_maxwidth)/(2*slope_min)
+local radius_cone_max = (depth_maxpeak-depth_maxwidth)/(2*slope_min) + radius_lining + 20
 local depth_maxwidth_dist = depth_maxwidth-depth_base
 local depth_maxpeak_dist = depth_maxpeak-depth_maxwidth
 
@@ -107,6 +114,40 @@ local nvals_perlin_buffer = {}
 local nobj_perlin = nil
 local data = {}
 
+-- Used as part of the post-mapgen hackery to fix the weird slices mapgen v7 sometimes takes out of volcano cones
+local patch_func = function(patch_area, patch_content)
+	local minp = patch_area.MinEdge
+	local maxp = patch_area.MaxEdge
+	
+	local map_vm = minetest.get_voxel_manip(minp, maxp)
+	local emin, emax = map_vm:get_emerged_area()
+	local patch_data = {}
+	map_vm:get_data(patch_data)
+	
+	local map_area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
+	local map_iterator = map_area:iterp(minp, maxp)
+	
+	changes_made = false
+	
+	for vi in patch_area:iterp(minp, maxp) do
+		local mi = map_iterator()
+		if patch_data[mi] == c_air and patch_content[vi] ~= nil then
+			patch_data[mi] = patch_content[vi]
+			changes_made = true
+		end	
+	end
+
+	if changes_made then	
+		--send data back to voxelmanip
+		map_vm:set_data(patch_data)
+		--calc lighting
+		map_vm:set_lighting({day = 0, night = 0})
+		map_vm:calc_lighting()
+		--write it to world
+		map_vm:write_to_map()
+	end
+end
+
 minetest.register_on_generated(function(minp, maxp, seed)
 	if minp.y > depth_maxpeak or maxp.y < depth_root then
 		return
@@ -130,6 +171,17 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		vector.distance(volcano.location, {x=minp.x, y=0, z=maxp.z}) > base_radius + 20
 	then
 		return
+	end
+	
+	local patch_area_max
+	local patch_content_max	
+	local patch_area_min
+	local patch_content_min
+	if mg_name == "v7" then
+		patch_area_max = VoxelArea:new{MinEdge={x=minp.x, y=maxp.y, z=minp.z}, MaxEdge=maxp}
+		patch_content_max = {}
+		patch_area_min = VoxelArea:new{MinEdge=minp, MaxEdge={x=maxp.x, y=minp.y, z=maxp.z}}
+		patch_content_min = {}
 	end
 	
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
@@ -233,14 +285,24 @@ minetest.register_on_generated(function(minp, maxp, seed)
 					end
 				end
 			end
+			
+			-- Used as part of the post-mapgen hackery to fix the weird slices mapgen v7 sometimes takes out of volcano cones
+			if mg_name == "v7" then
+				if y == maxp.y then
+					patch_content_max[patch_area_max:index(x,y,z)] = data[vi]
+				elseif y == minp.y then
+					patch_content_min[patch_area_min:index(x,y,z)] = data[vi]
+				end
+			end
 		end
-	
+	end
+
+	-- Used as part of the post-mapgen hackery to fix the weird slices mapgen v7 sometimes takes out of volcano cones
+	if mg_name == "v7" then
+		minetest.after(2, patch_func, patch_area_max, patch_content_max)
+		minetest.after(2, patch_func, patch_area_min, patch_content_min)
 	end
 	
-	-- These don't seem to work?
-	--minetest.generate_decorations(vm, minp, maxp)
-	--minetest.generate_ores(vm, minp, maxp)
-		
 	--send data back to voxelmanip
 	vm:set_data(data)
 	--calc lighting

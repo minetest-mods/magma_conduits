@@ -17,3 +17,5 @@ Magma veins can be optionally be lined with a layer of obsidian. The density of 
 ## Volcanoes
 
 Volcanoes are large cone-shaped mountains formed from lava that rises through a central pipe. This mod can scatter randomly sized and shaped volcanoes across the map, with configurable spacing and probability. Volcanoes come in "extinct", "dormant" and "active" forms, and tall volcanoes can have a mantle of snow clinging to their peaks.
+
+If a player has the "findvolcano" priviledge he can use the "findvolcano" console command to locate nearby volcanoes.
