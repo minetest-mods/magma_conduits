@@ -131,7 +131,7 @@ local patch_func = function(patch_area, patch_content)
 	
 	for vi in patch_area:iterp(minp, maxp) do
 		local mi = map_iterator()
-		if patch_data[mi] == c_air and patch_content[vi] ~= nil then
+		if patch_content[vi] ~= nil and patch_data[mi] ~= patch_content[vi] then
 			patch_data[mi] = patch_content[vi]
 			changes_made = true
 		end	
