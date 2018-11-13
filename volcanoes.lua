@@ -42,12 +42,12 @@ local c_cone = minetest.get_content_id("default:stone")
 
 local c_ash = minetest.get_content_id("default:gravel")
 local c_soil = minetest.get_content_id("default:dirt")
-local c_soil_grass = minetest.get_content_id("default:dirt_with_grass")
 local c_soil_snow = minetest.get_content_id("default:dirt_with_snow")
 local c_snow = minetest.get_content_id("default:snow")
 local c_snow_block = minetest.get_content_id("default:snowblock")
 
-local c_underwater_soil = minetest.get_content_id("default:sand")
+local c_sand = minetest.get_content_id("default:sand")
+local c_underwater_soil = c_sand
 local c_plug = minetest.get_content_id("default:obsidian")
 
 if magma_conduits.config.glowing_rock then
@@ -115,19 +115,19 @@ local nobj_perlin = nil
 local data = {}
 
 -- Used as part of the post-mapgen hackery to fix the weird slices mapgen v7 sometimes takes out of volcano cones
+local patch_data = {}
 local patch_func = function(patch_area, patch_content)
 	local minp = patch_area.MinEdge
 	local maxp = patch_area.MaxEdge
 	
 	local map_vm = minetest.get_voxel_manip(minp, maxp)
 	local emin, emax = map_vm:get_emerged_area()
-	local patch_data = {}
 	map_vm:get_data(patch_data)
 	
 	local map_area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
 	local map_iterator = map_area:iterp(minp, maxp)
 	
-	changes_made = false
+	local changes_made = false
 	
 	for vi in patch_area:iterp(minp, maxp) do
 		local mi = map_iterator()
@@ -202,29 +202,67 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	
 	local state = volcano.state
 	
+	-- Create a table of biome data for use with the biomemap.
+	if not magma_conduits.biome_ids then
+		magma_conduits.biome_ids = {}
+		for name, desc in pairs(minetest.registered_biomes) do
+			local i = minetest.get_biome_id(desc.name)
+			local biome_data = {}
+			--biome_data.name = desc.name
+			if desc.node_dust ~= nil and desc.node_dust ~= "" then
+				biome_data.c_dust = minetest.get_content_id(desc.node_dust)
+			end
+			if desc.node_top ~= nil and desc.node_top ~= "" then
+				biome_data.c_top = minetest.get_content_id(desc.node_top)
+				if biome_data.c_top == c_sand then
+					biome_data.c_top = c_ash -- beach sand just doesn't look nice on the side of a volcano, replace it with ash
+				end
+			end
+			if desc.node_filler ~= nil and desc.node_filler ~= "" then
+				biome_data.c_filler = minetest.get_content_id(desc.node_filler)
+				if biome_data.c_filler == c_sand then
+					biome_data.c_filler = c_ash -- beach sand just doesn't look nice on the side of a volcano, replace it with ash
+				end
+			end
+			magma_conduits.biome_ids[i] = biome_data
+		end
+	end	
+	local biomemap = minetest.get_mapgen_object("biomemap")
+	local minx = minp.x
+	local minz = minp.z
+	
 	for vi, x, y, z in area:iterp_xyz(minp, maxp) do
-
+	
 		local vi3d = noise_iterator()
 
 		local distance_perturbation = (nvals_perlin[vi3d]+1)*10
 		local distance = vector.distance({x=x, y=y, z=z}, {x=x_coord, y=y, z=z_coord}) - distance_perturbation
 
-		local dirtstuff
-		local replace_soil = false -- determines if the soil type should be replaced with c_soil if there's layers on top of it
+		local biome_data = magma_conduits.biome_ids[biomemap[(z-minz) * sidelen + (x-minx) + 1]]
+		
+		local c_top
+		local c_filler
+		local c_dust
 		if state < state_dormant then
 			if y < water_level then
-				dirtstuff = c_underwater_soil
-			elseif y < snow_line then
-				dirtstuff = c_soil_grass
-				replace_soil = true
+				c_top = c_underwater_soil
+				c_filler = c_underwater_soil
+			elseif y < snow_line and biome_data ~= nil then
+				c_top = biome_data.c_top
+				c_filler = biome_data.c_filler
+				c_dust = biome_data.c_dust
 			elseif y < snow_line + snow_border then
-				dirtstuff = c_soil_snow
-				replace_soil = true
+				c_top = c_soil_snow
+				c_filler = c_soil
+				c_dust = c_snow
 			else
-				dirtstuff = c_snow_block
+				c_top = c_snow_block
+				c_filler = c_snow_block
+				c_dust = c_snow
 			end
 		else
-			dirtstuff = c_ash
+			c_top = c_ash
+			c_filler = c_ash
 		end
 		
 		local pipestuff
@@ -274,15 +312,16 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				data[vi] = liningstuff
 			elseif distance <  current_elevation * -volcano.slope + base_radius then
 				data[vi] = c_cone
-			elseif distance < current_elevation * -volcano.slope + base_radius + nvals_perlin[vi3d]*-4 then
-				data[vi] = dirtstuff
-				if replace_soil and data[vi - area.ystride] == dirtstuff then
-					data[vi - area.ystride] = c_soil -- soil underneath a layer of other soil shouldn't have grass on top
+				if data[vi + area.ystride] == c_air and c_dust ~= nil then
+					data[vi + area.ystride] = c_dust
 				end
-				if y >= snow_line then
-					if data[vi + area.ystride] == c_air then
-						data[vi + area.ystride] = c_snow -- generation advances in a positive y direction so this will be overwritten if more solid stuff is placed above
-					end
+			elseif c_top ~= nil and c_filler ~= nil and distance < current_elevation * -volcano.slope + base_radius + nvals_perlin[vi3d]*-4 then
+				data[vi] = c_top
+				if data[vi - area.ystride] == c_top then
+					data[vi - area.ystride] = c_filler
+				end
+				if data[vi + area.ystride] == c_air and c_dust ~= nil then
+					data[vi + area.ystride] = c_dust
 				end
 			end
 			
@@ -326,7 +365,7 @@ local send_volcano_state = function(pos, name)
 	local text = "In region (" .. tostring(xmin) .. ", 0, " .. tostring(zmin) ..") to ("
 		.. tostring(xmin+volcano_region_size) .. ", 0, " .. tostring(zmin+volcano_region_size) ..")\n"
 
-	volcano = get_volcano(pos)
+	local volcano = get_volcano(pos)
 	if volcano == nil then
 		minetest.chat_send_player(name, text.."No volcano present")
 		return
@@ -358,7 +397,7 @@ minetest.register_chatcommand("findvolcano", {
 				send_volcano_state(pos, name)
 				return true
 			else
-				playerobj = minetest.get_player_by_name(name)
+				local playerobj = minetest.get_player_by_name(name)
 				send_volcano_state(playerobj:get_pos(), name)
 				return true
 			end
