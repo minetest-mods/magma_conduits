@@ -140,9 +140,6 @@ local patch_func = function(patch_area, patch_content)
 	if changes_made then	
 		--send data back to voxelmanip
 		map_vm:set_data(patch_data)
-		--calc lighting
-		map_vm:set_lighting({day = 0, night = 0})
-		map_vm:calc_lighting()
 		--write it to world
 		map_vm:write_to_map()
 	end
