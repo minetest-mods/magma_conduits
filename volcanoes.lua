@@ -67,7 +67,7 @@ local mg_name = minetest.get_mapgen_setting("mg_name")
 
 -- derived values
 
-local radius_cone_max = (depth_maxpeak-depth_maxwidth)/(2*slope_min) + radius_lining + 20
+local radius_cone_max =  (depth_maxpeak - depth_maxwidth) * slope_max + radius_lining + 20
 local depth_maxwidth_dist = depth_maxwidth-depth_base
 local depth_maxpeak_dist = depth_maxpeak-depth_maxwidth
 
@@ -80,9 +80,13 @@ local scatter_2d = function(min_xz, gridscale, border_width)
 	return point
 end
 
-local get_volcano = function(pos)
-	local corner_xz = {x = math.floor(pos.x / volcano_region_size) * volcano_region_size, z = math.floor(pos.z / volcano_region_size) * volcano_region_size}
+-- For some reason, map chunks generate with -32, -32, -32 as the "origin" minp. To make the large-scale grid align with map chunks it needs to be offset like this.
+local get_corner = function(pos)
+	return {x = math.floor((pos.x+32) / volcano_region_size) * volcano_region_size - 32, z = math.floor((pos.z+32) / volcano_region_size) * volcano_region_size - 32}
+end
 
+local get_volcano = function(pos)
+	local corner_xz = get_corner(pos)
 	local next_seed = math.random(1, 1000000000)
 	math.randomseed(corner_xz.x + corner_xz.z * 2 ^ 8 + mapgen_seed)
 
@@ -156,8 +160,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		return
 	end
 
-	local sidelen = maxp.x - minp.x + 1 --length of a mapblock
-
 	local volcano = get_volcano(minp)
 	
 	if volcano == nil then
@@ -168,10 +170,11 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	local base_radius = (depth_peak - depth_maxwidth) * volcano.slope + radius_lining
 
 	-- early out if the volcano is too far away to matter
-	if	vector.distance(volcano.location, {x=minp.x, y=0, z=minp.z}) > base_radius + 20 and 
-		vector.distance(volcano.location, {x=maxp.x, y=0, z=minp.z}) > base_radius + 20 and 
-		vector.distance(volcano.location, {x=maxp.x, y=0, z=maxp.z}) > base_radius + 20 and 
-		vector.distance(volcano.location, {x=minp.x, y=0, z=maxp.z}) > base_radius + 20
+	-- The plus 20 is because the noise being added will generally be in the 0-20 range, see the "distance" calculation below
+	if	volcano.location.x - base_radius - 20 > maxp.x or 
+		volcano.location.x + base_radius + 20 < minp.x or 
+		volcano.location.z - base_radius - 20 > maxp.z or
+		volcano.location.z + base_radius + 20 < minp.z
 	then
 		return
 	end
@@ -191,6 +194,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
 	vm:get_data(data)
 	
+	local sidelen = mapgen_chunksize * 16 --length of a mapblock
 	local chunk_lengths = {x = sidelen, y = sidelen, z = sidelen} --table of chunk edges
 
 	nobj_perlin = nobj_perlin or minetest.get_perlin_map(perlin_params, chunk_lengths)
@@ -383,11 +387,10 @@ minetest.register_privilege("findvolcano", { description = "Allows players to us
 
 local send_volcano_state = function(pos, name)
 
-	local xmin = math.floor(pos.x / volcano_region_size) * volcano_region_size
-	local zmin = math.floor(pos.z / volcano_region_size) * volcano_region_size
+	local corner_xz = get_corner(pos)
 	
-	local text = "In region (" .. tostring(xmin) .. ", 0, " .. tostring(zmin) ..") to ("
-		.. tostring(xmin+volcano_region_size) .. ", 0, " .. tostring(zmin+volcano_region_size) ..")\n"
+	local text = "In region (" .. tostring(corner_xz.x) .. ", 0, " .. tostring(corner_xz.z) ..") to ("
+		.. tostring(corner_xz.x+volcano_region_size) .. ", 0, " .. tostring(corner_xz.z+volcano_region_size) ..")\n"
 
 	local volcano = get_volcano(pos)
 	if volcano == nil then
@@ -404,6 +407,10 @@ local send_volcano_state = function(pos, name)
 	else
 		text = text .. "Active"
 	end
+	
+	local base_radius = (volcano.depth_peak - depth_maxwidth) * volcano.slope + radius_lining
+	text = text .. "\nBase radius: " .. tostring(base_radius)
+	
 	minetest.chat_send_player(name, text)
 end
 
