@@ -30,6 +30,9 @@ magma_conduits_volcano_max_slope (Maximum volcano slope) float 1.5
 #1200x1200 node region.
 magma_conduits_volcano_region_mapblocks (Region mapblocks) int 15
 
+magma_conduits_volcano_min_depth (Lowest depth magma pipes extend to) int -3000
+magma_conduits_volcano_magma_chambers (Enables magma chambers at base of pipes) bool true
+
 magma_conduits_volcano_probability_active (Probability of active volcano in region) float 0.4
 magma_conduits_volcano_probability_dormant (Probability of dormant volcano in region) float 0.2
 magma_conduits_volcano_probability_extinct (Probability of extinct volcano in region) float 0.2

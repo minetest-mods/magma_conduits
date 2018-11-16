@@ -1,4 +1,4 @@
-local depth_root = -3000 -- TODO: should add some kind of optional magma chamber down there
+local depth_root = magma_conduits.config.volcano_min_depth
 local depth_base = -50 -- point where the mountain root starts expanding
 local depth_maxwidth = -30 -- point of maximum width
 
@@ -19,6 +19,7 @@ local region_mapblocks = magma_conduits.config.volcano_region_mapblocks
 local mapgen_chunksize = tonumber(minetest.get_mapgen_setting("chunksize"))
 local volcano_region_size = region_mapblocks * mapgen_chunksize * 16
 
+local magma_chambers_enabled = magma_conduits.config.volcano_magma_chambers
 
 local p_active = magma_conduits.config.volcano_probability_active
 local p_dormant = magma_conduits.config.volcano_probability_dormant
@@ -94,7 +95,12 @@ local get_volcano = function(pos)
 	local location = scatter_2d(corner_xz, volcano_region_size, radius_cone_max)
 	--local location = {x=corner_xz.x+volcano_region_size/2, z = corner_xz.z+volcano_region_size/2} -- For testing, puts volcanoes in a consistent grid
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
-	local depth_lava = math.random(depth_peak - 25, depth_peak)
+	local depth_lava
+	if state < state_extinct then
+		depth_lava = math.random(depth_root, depth_base) -- extinct, put the lava somewhere deep.
+	else
+		depth_lava = math.random(depth_peak - 25, depth_peak) -- dormant or active, put the lava somewhere in the volcano's throat
+	end
 	local slope = math.random() * (slope_max - slope_min) + slope_min
 	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
 		
@@ -236,6 +242,9 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		local distance = vector.distance({x=x, y=y, z=z}, {x=x_coord, y=y, z=z_coord}) - distance_perturbation
 
 		local biome_data = magma_conduits.biome_ids[biomemap[(z-minz) * sidelen + (x-minx) + 1]]
+
+		-- Determine what materials to use at this y level
+		-------------------------------------------------------------------------------------------------
 		
 		local c_top
 		local c_filler
@@ -281,12 +290,30 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				liningstuff = c_lining
 			end
 		end
+
+		-- Actually create the volcano
+		-------------------------------------------------------------------------------------------
 		
-		if y < depth_base then -- pipe
-			if distance < radius_vent then
-				data[vi] = pipestuff
-			elseif distance < radius_lining then
-				if data[vi] ~= c_air and data[vi] ~= c_lava then -- leave holes into caves and into existing lava
+		if y < depth_base then
+			local chamber_radius = base_radius / volcano.slope
+			if magma_chambers_enabled and y < depth_root + chamber_radius then -- Magma chamber lower half
+				local lower_half = ((y - depth_root) / chamber_radius) * chamber_radius
+				if distance < lower_half + radius_vent then
+					data[vi] = c_lava -- Put lava in the magma chamber even for extinct volcanoes, if someone really wants to dig for it it's down there.
+				elseif distance < lower_half + radius_lining and data[vi] ~= c_air and data[vi] ~= c_lava then -- leave holes into caves and into existing lava
+					data[vi] = liningstuff
+				end
+			elseif magma_chambers_enabled and y < depth_root + chamber_radius * 2 then -- Magma chamber upper half
+				local upper_half = (1 - (y - depth_root - chamber_radius) / chamber_radius) * chamber_radius
+				if distance < upper_half + radius_vent then
+					data[vi] = c_lava
+				elseif distance < upper_half + radius_lining and data[vi] ~= c_air and data[vi] ~= c_lava then -- leave holes into caves and into existing lava
+					data[vi] = liningstuff
+				end
+			else -- pipe
+				if distance < radius_vent then
+					data[vi] = pipestuff
+				elseif distance < radius_lining and data[vi] ~= c_air and data[vi] ~= c_lava then -- leave holes into caves and into existing lava
 					data[vi] = liningstuff
 				end
 			end
