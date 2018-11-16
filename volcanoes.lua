@@ -408,9 +408,6 @@ local send_volcano_state = function(pos, name)
 		text = text .. "Active"
 	end
 	
-	local base_radius = (volcano.depth_peak - depth_maxwidth) * volcano.slope + radius_lining
-	text = text .. "\nBase radius: " .. tostring(base_radius)
-	
 	minetest.chat_send_player(name, text)
 end
 
