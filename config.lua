@@ -34,11 +34,9 @@ setting("bool", "obsidian_lining", true, "Add an obsidian lining to magma condui
 setting("bool", "ameliorate_floods", true, "Ameliorate lava floods on the surface")
 
 -- Removing this setting on account of issue https://github.com/minetest/minetest/issues/7364
---setting("int", "upper_limit", 512, "Upper extent of magma conduits")
---setting("int", "lower_limit", -31000, "Lower extent of magma conduits")
---from settingtypes.txt:
---magma_conduits_upper_limit (Upper extent of magma conduits) int 512
---magma_conduits_lower_limit (Lower extent of magma conduits) int -31000
+-- Fixed with commit https://github.com/minetest/minetest/commit/5c1edc58ab2abe8bc1f1bbcbb2f30a5899586968
+setting("int", "upper_limit", 31000, "Upper extent of magma conduits")
+setting("int", "lower_limit", -31000, "Lower extent of magma conduits")
 
 setting("bool", "volcanoes", true, "Enable volcanoes")
 setting("int", "volcano_min_height", 20, "Minimum volcano peak")

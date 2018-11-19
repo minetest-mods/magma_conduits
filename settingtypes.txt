@@ -13,6 +13,11 @@ magma_conduits_remove_lava_above (Remove any lava above this y level) int 512
 #surrounding terrain
 magma_conduits_ameliorate_floods (Ameliorate lava floods on the surface) bool true
 
+# Note: Setting limits near "0" in versions of Minetest before June 2018
+# commit 5c1edc5 may cause a crash due to a bug in vein ore generation
+magma_conduits_upper_limit (Upper extent of magma conduits) int 31000
+magma_conduits_lower_limit (Lower extent of magma conduits) int -31000
+
 [Volcanoes]
 #If this is false none of the other settings in this section apply
 magma_conduits_volcanoes (Enable volcanoes) bool true

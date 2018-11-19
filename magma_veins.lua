@@ -1,6 +1,6 @@
 -- Hard-coding on account of issue https://github.com/minetest/minetest/issues/7364
-local height_min = -31000 -- magma_conduits.config.lower_limit
-local height_max = 31000 --magma_conduits.config.upper_limit
+local height_min = magma_conduits.config.lower_limit
+local height_max = magma_conduits.config.upper_limit
 
 minetest.register_ore({
 	ore_type = "vein",
