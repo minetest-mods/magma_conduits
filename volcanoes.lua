@@ -39,7 +39,7 @@ local c_water = minetest.get_content_id("default:water_source")
 
 local c_lining = minetest.get_content_id("default:obsidian")
 local c_hot_lining = minetest.get_content_id("default:obsidian")
-local c_cone = minetest.get_content_id("default:wood")
+local c_cone = minetest.get_content_id("default:stone")
 
 local c_ash = minetest.get_content_id("default:gravel")
 local c_soil = minetest.get_content_id("default:dirt")
@@ -63,7 +63,7 @@ local mapgen_seed = tonumber(minetest.get_mapgen_setting("seed"))
 -- the curvy form of a vein or a cave that's one node tall.
 -- Some annoying hackery is needed to patch those slices back up
 -- again, and I only want to do that hackery if we're actually in mapgen v7.
-local mg_name = nil--minetest.get_mapgen_setting("mg_name")
+local mg_name = minetest.get_mapgen_setting("mg_name")
 
 -- derived values
 

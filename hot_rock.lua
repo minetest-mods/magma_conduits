@@ -94,7 +94,7 @@ minetest.register_abm{
 			local def = minetest.registered_nodes[name]
 			local target = def._magma_conduits_cools_to
 			if target then
-				minetest.set_node(pos, {name = target})
+				minetest.set_node(pos, {name = "default:cobble"})
 			else
 				minetest.log("error", name .. " is in group lava_heated but doesn't have a _magma_conduits_cools_to property defined in its definition")
 			end
