@@ -4,9 +4,25 @@ This mod makes magma more sparsely distributed across the map, but where it is f
 
 ## Lava interaction with adjacent nodes
 
-This mod provides a number of ABMs that cause nodes adjacent to lava to slowly convert into glowing "hot" forms, and then back to cool forms again if the lava goes away. Stone is converted into hot cobble and obsidian converts to a glowing red form.
+This mod provides an ABM that causes some types of nodes adjacent to lava to slowly convert into glowing "hot" forms, and then back to cool forms again if the lava goes away. Stone is converted into hot cobble and obsidian converts to a glowing red form.
 
-Also included are ABMs that cause soil adjacent to lava to be cooked into barren sand, and coal and diamond ore to be cooked into cobble.
+Other mods can hook into this ABM by adding the following to node definitions:
+
+```
+group:lava_heatable
+_magma_conduits_heats_to = hot node name
+```
+
+and
+
+```
+group:lava_heated
+_magma_conduits_cools_to = cool node name
+```
+
+so for example default:stone is added to the lava_heatable group and given _magma_conduits_heats_to = "magma_conduits:hot_cobble" and magma_conduits:hot_cobble is in the lava_heated group and is given _magma_conduits_cools_to = "default:cobble".
+
+Also included is an ABM that causes soil adjacent to lava to be cooked into barren sand.
 
 ## Magma veins
 

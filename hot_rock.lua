@@ -9,7 +9,8 @@ minetest.register_node("magma_conduits:hot_cobble", {
 	_doc_items_usagehelp = S("When normal stone is heated by lava it is converted into this. Beware when digging here!"),
 	tiles = {"magma_conduits_hot_cobble.png"},
 	is_ground_content = false,
-	groups = {cracky = 3, stone = 2, hot=1},
+	groups = {cracky = 3, stone = 2, lava_heated=1},
+	_magma_conduits_cools_to = "default:cobble",
 	sounds = default.node_sound_stone_defaults(),
 	light_source = 6,
 	drop = "default:cobble",
@@ -22,53 +23,81 @@ minetest.register_node("magma_conduits:glow_obsidian", {
 	tiles = {"magma_conduits_glow_obsidian.png"},
 	is_ground_content = true,
 	sounds = default.node_sound_stone_defaults(),
-	groups = {cracky=1, hot=1, level=2},
+	groups = {cracky=1, lava_heated=1, level=2},
+	_magma_conduits_cools_to = "default:obsidian",
 	light_source = 6,
 	drop = "default:obsidian",
 })
 
+local simple_copy
+simple_copy = function(t)
+	local r = {}
+	for k, v in pairs(t) do
+		if type(v) == "table" then
+			r[k] = simple_copy(v)
+		else
+			r[k] = v
+		end
+	end
+	return r
+end
+
+-- can't use minetest.override_item to change group memberships here due to issue https://github.com/minetest/minetest/issues/5518
+
+local make_heatable = function(nodename, heats_to)
+	local original_def = minetest.registered_nodes[nodename]
+	if original_def ~= nil then
+		local def = simple_copy(original_def)
+		def.groups.lava_heatable = 1
+		def._magma_conduits_heats_to = heats_to
+		minetest.register_node(":"..nodename, def)
+	end
+end
+
+make_heatable("default:obsidian", "magma_conduits:glow_obsidian")
+make_heatable("default:stone", "magma_conduits:hot_cobble")
+make_heatable("default:cobble", "magma_conduits:hot_cobble")
+make_heatable("default:mossycobble", "magma_conduits:hot_cobble")
+make_heatable("default:stone_with_coal", "magma_conduits:hot_cobble")
+make_heatable("default:stone_with_diamond", "magma_conduits:hot_cobble")
+
+make_heatable("default:permafrost", "default:dirt")
+make_heatable("default:permafrost_with_stones", "default:dirt")
+make_heatable("default:permafrost_with_moss", "default:dirt")
+
 minetest.register_abm{
-    label = "stone heating",
-	nodenames = {"default:stone", "default:cobble", "default:mossycobble"},
+    label = "magma_conduits lava heating neighbors",
+	nodenames = {"group:lava_heatable"},
 	neighbors = {"default:lava_source", "default:lava_flowing"},
 	interval = 10,
 	chance = 5,
 	action = function(pos)
-		minetest.set_node(pos, {name = "magma_conduits:hot_cobble"})
-	end,
-}
-
-minetest.register_abm{
-    label = "obsidian heating",
-	nodenames = {"default:obsidian"},
-	neighbors = {"default:lava_source", "default:lava_flowing"},
-	interval = 10,
-	chance = 5,
-	action = function(pos)
-		minetest.set_node(pos, {name = "magma_conduits:glow_obsidian"})
-	end,
-}
-
-minetest.register_abm{
-    label = "stone cooling",
-	nodenames = {"magma_conduits:hot_cobble"},
-	interval = 100,
-	chance = 10,
-	action = function(pos)
-		if not minetest.find_node_near(pos, 2, {"default:lava_source", "default:lava_flowing"}, false) then
-			minetest.set_node(pos, {name = "default:cobble"})
+		local name = minetest.get_node(pos).name
+		local def = minetest.registered_nodes[name]
+		local target = def._magma_conduits_heats_to
+		if target then
+			minetest.set_node(pos, {name = target})
+		else
+			minetest.log("error", name .. " is in group lava_heatable but doesn't have a _magma_conduits_heats_to property defined in its definition")
 		end
 	end,
 }
 
 minetest.register_abm{
-    label = "obsidian cooling",
-	nodenames = {"magma_conduits:glow_obsidian"},
+    label = "magma_conduits cooling stuff heated by lava",
+	nodenames = {"group:lava_heated"},
 	interval = 100,
 	chance = 10,
 	action = function(pos)
 		if not minetest.find_node_near(pos, 2, {"default:lava_source", "default:lava_flowing"}, false) then
-			minetest.set_node(pos, {name = "default:obsidian"})
+			local name = minetest.get_node(pos).name
+			local def = minetest.registered_nodes[name]
+			local target = def._magma_conduits_cools_to
+			if target then
+				minetest.set_node(pos, {name = "default:cobble"})
+			else
+				minetest.log("error", name .. " is in group lava_heated but doesn't have a _magma_conduits_cools_to property defined in its definition")
+			end
 		end
 	end,
 }
