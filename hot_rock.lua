@@ -55,6 +55,7 @@ local make_heatable = function(nodename, heats_to)
 end
 
 make_heatable("default:obsidian", "magma_conduits:glow_obsidian")
+
 make_heatable("default:stone", "magma_conduits:hot_cobble")
 make_heatable("default:cobble", "magma_conduits:hot_cobble")
 make_heatable("default:mossycobble", "magma_conduits:hot_cobble")
@@ -74,11 +75,14 @@ minetest.register_abm{
 	action = function(pos)
 		local name = minetest.get_node(pos).name
 		local def = minetest.registered_nodes[name]
-		local target = def._magma_conduits_heats_to
-		if target then
-			minetest.set_node(pos, {name = target})
-		else
-			minetest.log("error", name .. " is in group lava_heatable but doesn't have a _magma_conduits_heats_to property defined in its definition")
+		
+		if def.groups.lava_heatable then
+			local target = def._magma_conduits_heats_to
+			if target then
+				minetest.set_node(pos, {name = target})
+			else
+				minetest.log("error", name .. " is in group lava_heatable but doesn't have a _magma_conduits_heats_to property defined in its definition")
+			end
 		end
 	end,
 }
