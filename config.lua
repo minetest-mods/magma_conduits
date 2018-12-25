@@ -47,6 +47,7 @@ setting("int", "volcano_region_mapblocks", 15, "Map blocks per chunk")
 
 setting("int", "volcano_min_depth", -3000, "Lowest point the magma pipe goes to")
 setting("bool", "volcano_magma_chambers", true, "Enable magma chambers at the base of the magma pipe")
+setting("float", "volcano_magma_chamber_radius_multiplier", 0.5, "Magma chamber radius multiplier")
 
 setting("float", "volcano_probability_active", 0.4, "Probability that there's an active volcano in each region")
 setting("float", "volcano_probability_dormant", 0.2, "Probability that there's a dormant volcano in each region")

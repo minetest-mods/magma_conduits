@@ -1,3 +1,9 @@
+-- NOTE: This code contains some hacks to work around a number of bugs in mapgen v7 and in Minetest's core mapgen code.
+-- The issue URLs for those bugs are included in comments wherever those hacks are used, if the issues get resolved 
+-- then the associated hacks should be removed.
+-- https://github.com/minetest/minetest/issues/7878
+-- https://github.com/minetest/minetest/issues/7864
+
 local depth_root = magma_conduits.config.volcano_min_depth
 local depth_base = -50 -- point where the mountain root starts expanding
 local depth_maxwidth = -30 -- point of maximum width
@@ -20,6 +26,7 @@ local mapgen_chunksize = tonumber(minetest.get_mapgen_setting("chunksize"))
 local volcano_region_size = region_mapblocks * mapgen_chunksize * 16
 
 local magma_chambers_enabled = magma_conduits.config.volcano_magma_chambers
+local chamber_radius_multiplier = magma_conduits.config.volcano_magma_chamber_radius_multiplier
 
 local p_active = magma_conduits.config.volcano_probability_active
 local p_dormant = magma_conduits.config.volcano_probability_dormant
@@ -58,11 +65,12 @@ end
 local water_level = tonumber(minetest.get_mapgen_setting("water_level"))
 local mapgen_seed = tonumber(minetest.get_mapgen_setting("seed"))
 
--- Mapgen v7 has a bizzare glitch where it will sometimes cut slices out of the generated volcano
--- cone *after* mapgen is finished. The slices are taken at maxp.y or minp.y and resemble
--- the curvy form of a vein or a cave that's one node tall.
+-- Mapgen v7 has a glitch where it will sometimes cut slices out of the generated volcano
+-- cone *after* mapgen is finished. The slices are taken at maxp.y or minp.y and match the
+-- rivers formed by the "ridges" flag, if you disable "ridges" they don't occur.
 -- Some annoying hackery is needed to patch those slices back up
 -- again, and I only want to do that hackery if we're actually in mapgen v7.
+-- https://github.com/minetest/minetest/issues/7878
 local mg_name = minetest.get_mapgen_setting("mg_name")
 
 -- derived values
@@ -124,7 +132,7 @@ local nvals_perlin_buffer = {}
 local nobj_perlin = nil
 local data = {}
 
--- Used as part of the post-mapgen hackery to fix the weird slices mapgen v7 sometimes takes out of volcano cones
+-- https://github.com/minetest/minetest/issues/7878
 local patch_data = {}
 local patch_func = function(patch_area, patch_content)
 	local minp = patch_area.MinEdge
@@ -155,6 +163,41 @@ local patch_func = function(patch_area, patch_content)
 	end
 end
 
+-- Placing lava in mapgen seems to sometimes trigger a very bad bug that
+-- results in a map block that will always crash the game when it is emerged.
+-- Deferring the placement of lava until after mapgen is over seems to work around it.
+-- https://github.com/minetest/minetest/issues/7864
+local node_patch_func = function(deferred_area, deferred_nodes, c_node)
+	local minp = deferred_area.MinEdge
+	local maxp = deferred_area.MaxEdge
+	
+	local map_vm = minetest.get_voxel_manip(minp, maxp)
+	local emin, emax = map_vm:get_emerged_area()
+	map_vm:get_data(patch_data)
+	
+	if vector.equals(minp, emin) and vector.equals(maxp, emax) then
+		for _, vi in ipairs(deferred_nodes) do
+			patch_data[vi] = c_node
+		end	
+	else
+		local map_area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
+		for _, vi in ipairs(deferred_nodes) do
+			local pos = deferred_area:position(vi)
+			local mapi = map_area:indexp(pos)
+			patch_data[mapi] = c_node
+		end
+	end
+
+	--send data back to voxelmanip
+	map_vm:set_data(patch_data)
+	map_vm:set_lighting({day = 0, night = 0})
+	map_vm:calc_lighting()
+	map_vm:update_liquids()
+	--write it to world
+	map_vm:write_to_map()
+end
+
+
 minetest.register_on_generated(function(minp, maxp, seed)
 	if minp.y > depth_maxpeak or maxp.y < depth_root then
 		return
@@ -168,6 +211,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	
 	local depth_peak = volcano.depth_peak
 	local base_radius = (depth_peak - depth_maxwidth) * volcano.slope + radius_lining
+	local chamber_radius = (base_radius / volcano.slope) * chamber_radius_multiplier
 
 	-- early out if the volcano is too far away to matter
 	-- The plus 20 is because the noise being added will generally be in the 0-20 range, see the "distance" calculation below
@@ -179,6 +223,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		return
 	end
 	
+	-- https://github.com/minetest/minetest/issues/7878
 	local patch_area_max
 	local patch_content_max	
 	local patch_area_min
@@ -189,6 +234,8 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		patch_area_min = VoxelArea:new{MinEdge=minp, MaxEdge={x=maxp.x, y=minp.y, z=maxp.z}}
 		patch_content_min = {}
 	end
+	-- https://github.com/minetest/minetest/issues/7864
+	local deferred_lava = {}
 	
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
@@ -206,7 +253,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	local z_coord = volcano.location.z
 	local depth_lava = volcano.depth_lava
 	local caldera = volcano.caldera
-	
 	local state = volcano.state
 	
 	-- Create a table of biome data for use with the biomemap.
@@ -299,7 +345,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		-------------------------------------------------------------------------------------------
 		
 		if y < depth_base then
-			local chamber_radius = base_radius / volcano.slope
 			if magma_chambers_enabled and y < depth_root + chamber_radius then -- Magma chamber lower half
 				local lower_half = ((y - depth_root) / chamber_radius) * chamber_radius
 				if distance < lower_half + radius_vent then
@@ -316,14 +361,24 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				end
 			else -- pipe
 				if distance < radius_vent then
-					data[vi] = pipestuff
+					--https://github.com/minetest/minetest/issues/7864
+					if pipestuff == c_lava then
+						table.insert(deferred_lava, vi)
+					else
+						data[vi] = pipestuff
+					end
 				elseif distance < radius_lining and data[vi] ~= c_air and data[vi] ~= c_lava then -- leave holes into caves and into existing lava
 					data[vi] = liningstuff
 				end
 			end
 		elseif y < depth_maxwidth then -- root
 			if distance < radius_vent then
-				data[vi] = pipestuff
+				--https://github.com/minetest/minetest/issues/7864
+				if pipestuff == c_lava then
+					table.insert(deferred_lava, vi)
+				else
+					data[vi] = pipestuff
+				end
 			elseif distance < radius_lining then
 				data[vi] = liningstuff
 			elseif distance < radius_lining + ((y - depth_base)/depth_maxwidth_dist) * base_radius then
@@ -335,7 +390,12 @@ minetest.register_on_generated(function(minp, maxp, seed)
 			if current_elevation > peak_elevation - caldera and distance < current_elevation - peak_elevation + caldera then
 				data[vi] = c_air -- caldera
 			elseif distance < radius_vent then
-				data[vi] = pipestuff
+				--https://github.com/minetest/minetest/issues/7864
+				if pipestuff == c_lava then
+					table.insert(deferred_lava, vi)
+				else
+					data[vi] = pipestuff
+				end
 			elseif distance < radius_lining then
 				data[vi] = liningstuff
 			elseif distance <  current_elevation * -volcano.slope + base_radius then
@@ -353,8 +413,8 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				end
 			end
 			
-			-- Used as part of the post-mapgen hackery to fix the weird slices mapgen v7 sometimes takes out of volcano cones
-			if mg_name == "v7" then
+			-- https://github.com/minetest/minetest/issues/7878
+			if mg_name == "v7" and y > water_level then
 				if y == maxp.y then
 					patch_content_max[patch_area_max:index(x,y,z)] = data[vi]
 				elseif y == minp.y then
@@ -363,11 +423,16 @@ minetest.register_on_generated(function(minp, maxp, seed)
 			end
 		end
 	end
-
-	-- Used as part of the post-mapgen hackery to fix the weird slices mapgen v7 sometimes takes out of volcano cones
+	
+	-- https://github.com/minetest/minetest/issues/7878
 	if mg_name == "v7" then
-		minetest.after(2, patch_func, patch_area_max, patch_content_max)
-		minetest.after(2, patch_func, patch_area_min, patch_content_min)
+		minetest.after(1, patch_func, patch_area_max, patch_content_max)
+		minetest.after(1, patch_func, patch_area_min, patch_content_min)
+	end
+
+	-- https://github.com/minetest/minetest/issues/7864
+	if table.getn(deferred_lava) > 0 then
+		minetest.after(2, node_patch_func, area, deferred_lava, c_lava)
 	end
 	
 	--send data back to voxelmanip
