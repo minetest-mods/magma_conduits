@@ -4,6 +4,9 @@
 -- https://github.com/minetest/minetest/issues/7878
 -- https://github.com/minetest/minetest/issues/7864
 
+local modpath = minetest.get_modpath(minetest.get_current_modname())
+dofile(modpath .. "/volcano_lava.lua") -- https://github.com/minetest/minetest/issues/7864
+
 local depth_root = magma_conduits.config.volcano_min_depth
 local depth_base = -50 -- point where the mountain root starts expanding
 local depth_maxwidth = -30 -- point of maximum width
@@ -41,7 +44,7 @@ local state_extinct = 1 - p_active - p_dormant
 local state_none = 1 - p_active - p_dormant - p_extinct
 
 local c_air = minetest.get_content_id("air")
-local c_lava = minetest.get_content_id("default:lava_source")
+local c_lava = minetest.get_content_id("magma_conduits:lava_source") -- https://github.com/minetest/minetest/issues/7864
 local c_water = minetest.get_content_id("default:water_source")
 
 local c_lining = minetest.get_content_id("default:obsidian")
@@ -163,41 +166,6 @@ local patch_func = function(patch_area, patch_content)
 	end
 end
 
--- Placing lava in mapgen seems to sometimes trigger a very bad bug that
--- results in a map block that will always crash the game when it is emerged.
--- Deferring the placement of lava until after mapgen is over seems to work around it.
--- https://github.com/minetest/minetest/issues/7864
-local node_patch_func = function(deferred_area, deferred_nodes, c_node)
-	local minp = deferred_area.MinEdge
-	local maxp = deferred_area.MaxEdge
-	
-	local map_vm = minetest.get_voxel_manip(minp, maxp)
-	local emin, emax = map_vm:get_emerged_area()
-	map_vm:get_data(patch_data)
-	
-	if vector.equals(minp, emin) and vector.equals(maxp, emax) then
-		for _, vi in ipairs(deferred_nodes) do
-			patch_data[vi] = c_node
-		end	
-	else
-		local map_area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
-		for _, vi in ipairs(deferred_nodes) do
-			local pos = deferred_area:position(vi)
-			local mapi = map_area:indexp(pos)
-			patch_data[mapi] = c_node
-		end
-	end
-
-	--send data back to voxelmanip
-	map_vm:set_data(patch_data)
-	map_vm:set_lighting({day = 0, night = 0})
-	map_vm:calc_lighting()
-	map_vm:update_liquids()
-	--write it to world
-	map_vm:write_to_map()
-end
-
-
 minetest.register_on_generated(function(minp, maxp, seed)
 	if minp.y > depth_maxpeak or maxp.y < depth_root then
 		return
@@ -234,8 +202,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		patch_area_min = VoxelArea:new{MinEdge=minp, MaxEdge={x=maxp.x, y=minp.y, z=maxp.z}}
 		patch_content_min = {}
 	end
-	-- https://github.com/minetest/minetest/issues/7864
-	local deferred_lava = {}
 	
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
 	local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
@@ -361,24 +327,14 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				end
 			else -- pipe
 				if distance < radius_vent then
-					--https://github.com/minetest/minetest/issues/7864
-					if pipestuff == c_lava then
-						table.insert(deferred_lava, vi)
-					else
-						data[vi] = pipestuff
-					end
+					data[vi] = pipestuff
 				elseif distance < radius_lining and data[vi] ~= c_air and data[vi] ~= c_lava then -- leave holes into caves and into existing lava
 					data[vi] = liningstuff
 				end
 			end
 		elseif y < depth_maxwidth then -- root
 			if distance < radius_vent then
-				--https://github.com/minetest/minetest/issues/7864
-				if pipestuff == c_lava then
-					table.insert(deferred_lava, vi)
-				else
-					data[vi] = pipestuff
-				end
+				data[vi] = pipestuff
 			elseif distance < radius_lining then
 				data[vi] = liningstuff
 			elseif distance < radius_lining + ((y - depth_base)/depth_maxwidth_dist) * base_radius then
@@ -390,12 +346,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 			if current_elevation > peak_elevation - caldera and distance < current_elevation - peak_elevation + caldera then
 				data[vi] = c_air -- caldera
 			elseif distance < radius_vent then
-				--https://github.com/minetest/minetest/issues/7864
-				if pipestuff == c_lava then
-					table.insert(deferred_lava, vi)
-				else
-					data[vi] = pipestuff
-				end
+				data[vi] = pipestuff
 			elseif distance < radius_lining then
 				data[vi] = liningstuff
 			elseif distance <  current_elevation * -volcano.slope + base_radius then
@@ -426,13 +377,8 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	
 	-- https://github.com/minetest/minetest/issues/7878
 	if mg_name == "v7" then
-		minetest.after(1, patch_func, patch_area_max, patch_content_max)
-		minetest.after(1, patch_func, patch_area_min, patch_content_min)
-	end
-
-	-- https://github.com/minetest/minetest/issues/7864
-	if table.getn(deferred_lava) > 0 then
-		minetest.after(2, node_patch_func, area, deferred_lava, c_lava)
+		minetest.after(2, patch_func, patch_area_max, patch_content_max)
+		minetest.after(2, patch_func, patch_area_min, patch_content_min)
 	end
 	
 	--send data back to voxelmanip
