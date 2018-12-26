@@ -5,7 +5,7 @@
 -- https://github.com/minetest/minetest/issues/7864
 
 local modpath = minetest.get_modpath(minetest.get_current_modname())
-dofile(modpath .. "/volcano_lava.lua") -- https://github.com/minetest/minetest/issues/7864
+dofile(modpath .. "/volcano_lava.lua") -- https://github.com/minetest/minetest/issues/7864, https://github.com/minetest/minetest/issues/7878
 
 local depth_root = magma_conduits.config.volcano_min_depth
 local depth_base = -50 -- point where the mountain root starts expanding
@@ -49,7 +49,13 @@ local c_water = minetest.get_content_id("default:water_source")
 
 local c_lining = minetest.get_content_id("default:obsidian")
 local c_hot_lining = minetest.get_content_id("default:obsidian")
-local c_cone = minetest.get_content_id("default:stone")
+
+local c_cone
+if minetest.get_mapgen_setting("mg_name") == "v7" then
+	c_cone = minetest.get_content_id("magma_conduits:stone") -- https://github.com/minetest/minetest/issues/7878
+else
+	c_cone = minetest.get_content_id("default:stone")
+end
 
 local c_ash = minetest.get_content_id("default:gravel")
 local c_soil = minetest.get_content_id("default:dirt")
@@ -67,14 +73,6 @@ end
 
 local water_level = tonumber(minetest.get_mapgen_setting("water_level"))
 local mapgen_seed = tonumber(minetest.get_mapgen_setting("seed"))
-
--- Mapgen v7 has a glitch where it will sometimes cut slices out of the generated volcano
--- cone *after* mapgen is finished. The slices are taken at maxp.y or minp.y and match the
--- rivers formed by the "ridges" flag, if you disable "ridges" they don't occur.
--- Some annoying hackery is needed to patch those slices back up
--- again, and I only want to do that hackery if we're actually in mapgen v7.
--- https://github.com/minetest/minetest/issues/7878
-local mg_name = minetest.get_mapgen_setting("mg_name")
 
 -- derived values
 
@@ -135,37 +133,6 @@ local nvals_perlin_buffer = {}
 local nobj_perlin = nil
 local data = {}
 
--- https://github.com/minetest/minetest/issues/7878
-local patch_data = {}
-local patch_func = function(patch_area, patch_content)
-	local minp = patch_area.MinEdge
-	local maxp = patch_area.MaxEdge
-	
-	local map_vm = minetest.get_voxel_manip(minp, maxp)
-	local emin, emax = map_vm:get_emerged_area()
-	map_vm:get_data(patch_data)
-	
-	local map_area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
-	local map_iterator = map_area:iterp(minp, maxp)
-	
-	local changes_made = false
-	
-	for vi in patch_area:iterp(minp, maxp) do
-		local mi = map_iterator()
-		if patch_content[vi] ~= nil and patch_data[mi] ~= patch_content[vi] then
-			patch_data[mi] = patch_content[vi]
-			changes_made = true
-		end	
-	end
-
-	if changes_made then	
-		--send data back to voxelmanip
-		map_vm:set_data(patch_data)
-		--write it to world
-		map_vm:write_to_map()
-	end
-end
-
 minetest.register_on_generated(function(minp, maxp, seed)
 	if minp.y > depth_maxpeak or maxp.y < depth_root then
 		return
@@ -189,18 +156,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		volcano.location.z + base_radius + 20 < minp.z
 	then
 		return
-	end
-	
-	-- https://github.com/minetest/minetest/issues/7878
-	local patch_area_max
-	local patch_content_max	
-	local patch_area_min
-	local patch_content_min
-	if mg_name == "v7" then
-		patch_area_max = VoxelArea:new{MinEdge={x=minp.x, y=maxp.y, z=minp.z}, MaxEdge=maxp}
-		patch_content_max = {}
-		patch_area_min = VoxelArea:new{MinEdge=minp, MaxEdge={x=maxp.x, y=minp.y, z=maxp.z}}
-		patch_content_min = {}
 	end
 	
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
@@ -364,21 +319,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				end
 			end
 			
-			-- https://github.com/minetest/minetest/issues/7878
-			if mg_name == "v7" and y > water_level then
-				if y == maxp.y then
-					patch_content_max[patch_area_max:index(x,y,z)] = data[vi]
-				elseif y == minp.y then
-					patch_content_min[patch_area_min:index(x,y,z)] = data[vi]
-				end
-			end
 		end
-	end
-	
-	-- https://github.com/minetest/minetest/issues/7878
-	if mg_name == "v7" then
-		minetest.after(2, patch_func, patch_area_max, patch_content_max)
-		minetest.after(2, patch_func, patch_area_min, patch_content_min)
 	end
 	
 	--send data back to voxelmanip
