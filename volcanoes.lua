@@ -109,7 +109,7 @@ local get_volcano = function(pos)
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava
 	if state < state_extinct then
-		depth_lava = depth_base - math.random(1, math.abs(depth_root)) -- extinct, put the lava somewhere deep.
+		depth_lava = - math.random(1, math.abs(depth_root)) -- extinct, put the lava somewhere deep.
 	elseif state < state_dormant then
 		depth_lava = depth_peak - math.random(5, 50) -- dormant
 	else
@@ -246,13 +246,8 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		local pipestuff
 		local liningstuff
 		if y < depth_lava + math.random() * 1.1 then
-			if state < state_extinct then
-				pipestuff = c_plug -- extinct volcano
-				liningstuff = c_lining
-			else
-				pipestuff = c_lava
-				liningstuff = c_hot_lining
-			end
+			pipestuff = c_lava
+			liningstuff = c_hot_lining
 		else
 			if state < state_dormant then
 				pipestuff = c_plug -- dormant volcano
