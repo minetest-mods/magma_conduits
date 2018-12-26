@@ -29,15 +29,15 @@ magma_conduits_volcano_min_slope (Minimum volcano slope) float 0.75
 magma_conduits_volcano_max_slope (Maximum volcano slope) float 1.5
 #The size of the region within which each volcano is randomly placed
 #measured in mapblocks, which is usually 80 nodes on a side.
-#Eg, the default of 15 means that one volcano is placed in each
-#1200x1200 node region.
-magma_conduits_volcano_region_mapblocks (Region mapblocks) int 15
+#Eg, the default of 16 means that one volcano is placed in each
+#1280x1280 node region.
+magma_conduits_volcano_region_mapblocks (Region mapblocks) int 16
 
 magma_conduits_volcano_min_depth (Lowest depth magma pipes extend to) int -3000
 magma_conduits_volcano_magma_chambers (Enables magma chambers at base of pipes) bool true
 #With a multiplier of 1, magma chambers are the same size as the mountain above them.
 magma_conduits_volcano_magma_chamber_radius_multiplier (Magma chamber radius multiplier) float 0.5
 
-magma_conduits_volcano_probability_active (Probability of active volcano in region) float 0.4
-magma_conduits_volcano_probability_dormant (Probability of dormant volcano in region) float 0.2
-magma_conduits_volcano_probability_extinct (Probability of extinct volcano in region) float 0.2
+magma_conduits_volcano_probability_active (Probability of active volcano in region) float 0.3
+magma_conduits_volcano_probability_dormant (Probability of dormant volcano in region) float 0.15
+magma_conduits_volcano_probability_extinct (Probability of extinct volcano in region) float 0.15

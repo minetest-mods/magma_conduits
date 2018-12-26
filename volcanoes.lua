@@ -396,21 +396,24 @@ end)
 
 minetest.register_privilege("findvolcano", { description = "Allows players to use a console command to find volcanoes", give_to_singleplayer = false})
 
+function round(val, decimal)
+  if (decimal) then
+    return math.floor( (val * 10^decimal) + 0.5) / (10^decimal)
+  else
+    return math.floor(val+0.5)
+  end
+end
+
 local send_volcano_state = function(pos, name)
-
 	local corner_xz = get_corner(pos)
-	
-	local text = "In region (" .. tostring(corner_xz.x) .. ", 0, " .. tostring(corner_xz.z) ..") to ("
-		.. tostring(corner_xz.x+volcano_region_size) .. ", 0, " .. tostring(corner_xz.z+volcano_region_size) ..")\n"
-
 	local volcano = get_volcano(pos)
 	if volcano == nil then
-		minetest.chat_send_player(name, text.."No volcano present")
 		return
 	end
-	text = text .. "Nearest volcano is at " .. minetest.pos_to_string(volcano.location, 0)
-		.. "\nHeight: " .. tostring(volcano.depth_peak) .. " Slope: " .. tostring(volcano.slope)
-		.. "\nState: "
+	local location = {x=math.floor(volcano.location.x), y=volcano.depth_peak, z=math.floor(volcano.location.z)}
+	local text = "Peak at " .. minetest.pos_to_string(location)
+		.. ", Slope: " .. tostring(round(volcano.slope, 2))
+		.. ", State: "
 	if volcano.state < state_extinct then
 		text = text .. "Extinct"
 	elseif volcano.state < state_dormant then
@@ -422,9 +425,21 @@ local send_volcano_state = function(pos, name)
 	minetest.chat_send_player(name, text)
 end
 
+local send_nearby_states = function(pos, name)
+	send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z+volcano_region_size}, name)
+	send_volcano_state({x=pos.x, y=0, z=pos.z+volcano_region_size}, name)
+	send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z+volcano_region_size}, name)
+	send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z}, name)
+	send_volcano_state(pos, name)
+	send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z}, name)
+	send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z-volcano_region_size}, name)
+	send_volcano_state({x=pos.x, y=0, z=pos.z-volcano_region_size}, name)
+	send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z-volcano_region_size}, name)
+end
+
 minetest.register_chatcommand("findvolcano", {
     params = "pos", -- Short parameter description
-    description = "find the volcano in the player's map region, or in the map region containing pos if provided",
+    description = "find the volcanoes near the player's map region, or in the map region containing pos if provided",
     func = function(name, param)
 		if minetest.check_player_privs(name, {findvolcano = true}) then
 			local pos = {}
@@ -433,11 +448,11 @@ minetest.register_chatcommand("findvolcano", {
 			pos.y = tonumber(pos.y)
 			pos.z = tonumber(pos.z)
 			if pos.x and pos.y and pos.z then
-				send_volcano_state(pos, name)
+				send_nearby_states(pos, name)
 				return true
 			else
 				local playerobj = minetest.get_player_by_name(name)
-				send_volcano_state(playerobj:get_pos(), name)
+				send_nearby_states(playerobj:get_pos(), name)
 				return true
 			end
 		else

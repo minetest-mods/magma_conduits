@@ -39,12 +39,12 @@ minetest.register_lbm({
 	end,
 })
 
-minetest.register_abm({
-	label = "convert magma_conduits lava",
-	nodenames = {"magma_conduits:lava_source"},
-	interval = 1.0,
-	chance = 1,
-	action = function(pos)
-		minetest.set_node(pos, {name="default:lava_source"})
+minetest.register_lbm({
+	label = "convert magma_conduits flowing lava",
+	name = "magma_conduits:convert_flowing_lava",
+	nodenames = {"magma_conduits:lava_flowing"},
+	run_at_every_load = true,
+	action = function(pos, node)
+		minetest.set_node(pos, {name="default:lava_flowing"})
 	end,
 })
