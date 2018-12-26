@@ -110,9 +110,12 @@ local get_volcano = function(pos)
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava
 	if state < state_extinct then
-		depth_lava = math.random(depth_root, depth_base) -- extinct, put the lava somewhere deep.
+		depth_lava = depth_base - math.random(1, math.abs(depth_root)) -- extinct, put the lava somewhere deep.
+	elseif state < state_dormant then
+		depth_lava = depth_peak - math.random(5, 50) -- dormant
+		minetest.chat_send_all(tostring(depth_lava))
 	else
-		depth_lava = math.random(depth_peak - 25, depth_peak) -- dormant or active, put the lava somewhere in the volcano's throat
+		depth_lava = depth_peak - math.random(1, 25) -- active, put the lava near the top
 	end
 	local slope = math.random() * (slope_max - slope_min) + slope_min
 	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
