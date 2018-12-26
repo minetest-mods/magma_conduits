@@ -1,1 +1,1 @@
-Removes default mapgen lava and adds widely-spaced vertical lava "veins".
+Removes default mapgen lava and adds widely-spaced volcanoes and lava "veins".
