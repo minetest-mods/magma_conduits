@@ -106,14 +106,12 @@ local get_volcano = function(pos)
 	end
 	
 	local location = scatter_2d(corner_xz, volcano_region_size, radius_cone_max)
-	--local location = {x=corner_xz.x+volcano_region_size/2, z = corner_xz.z+volcano_region_size/2} -- For testing, puts volcanoes in a consistent grid
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava
 	if state < state_extinct then
 		depth_lava = depth_base - math.random(1, math.abs(depth_root)) -- extinct, put the lava somewhere deep.
 	elseif state < state_dormant then
 		depth_lava = depth_peak - math.random(5, 50) -- dormant
-		minetest.chat_send_all(tostring(depth_lava))
 	else
 		depth_lava = depth_peak - math.random(1, 25) -- active, put the lava near the top
 	end
