@@ -7,15 +7,13 @@ magma_conduits_remove_default_lava (Remove default mapgen lava) bool true
 magma_conduits_magma_veins (Enable magma veins) bool true
 magma_conduits_spread (Approximate spacing between magma conduits) int 400
 magma_conduits_obsidian_lining (Add an obsidian lining to magma conduits) bool true
-#This is useful for preventing magma conduits from being placed in floatlands
-magma_conduits_remove_lava_above (Remove any lava above this y level) int 512
 #Removes magma near the surface that could spill out of an open magma vein onto
 #surrounding terrain
 magma_conduits_ameliorate_floods (Ameliorate lava floods on the surface) bool true
 
 # Note: Setting limits near "0" in versions of Minetest before June 2018
 # commit 5c1edc5 may cause a crash due to a bug in vein ore generation
-magma_conduits_upper_limit (Upper extent of magma conduits) int 31000
+magma_conduits_upper_limit (Upper extent of magma conduits) int -256
 magma_conduits_lower_limit (Lower extent of magma conduits) int -31000
 
 [Volcanoes]

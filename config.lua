@@ -29,13 +29,12 @@ setting("bool", "cook_soil", true, "Cause soil and carbon-containing ores to be 
 
 setting("bool", "magma_veins", true, "Enable magma veins")
 setting("int", "spread", 400, "Approximate spacing between magma conduits")
-setting("int", "remove_lava_above", 512, "Remove lava above this y level")
 setting("bool", "obsidian_lining", true, "Add an obsidian lining to magma conduits")
 setting("bool", "ameliorate_floods", true, "Ameliorate lava floods on the surface")
 
 -- Removing this setting on account of issue https://github.com/minetest/minetest/issues/7364
 -- Fixed with commit https://github.com/minetest/minetest/commit/5c1edc58ab2abe8bc1f1bbcbb2f30a5899586968
-setting("int", "upper_limit", 31000, "Upper extent of magma conduits")
+setting("int", "upper_limit", -256, "Upper extent of magma conduits")
 setting("int", "lower_limit", -31000, "Lower extent of magma conduits")
 
 setting("bool", "volcanoes", true, "Enable volcanoes")

@@ -47,9 +47,7 @@ minetest.register_ore({
 
 local water_level = tonumber(minetest.get_mapgen_setting("water_level"))
 
-local lava_y_cutoff = magma_conduits.config.remove_lava_above
--- if the y cutoff is at or below water level, ameliorate_floods is pointless.
-local ameliorate_floods = magma_conduits.config.ameliorate_floods and lava_y_cutoff > water_level
+local ameliorate_floods = magma_conduits.config.ameliorate_floods
 local obsidian_lining = magma_conduits.config.obsidian_lining
 
 local c_air = minetest.get_content_id("air")
@@ -68,7 +66,7 @@ end
 local remove_unsupported_lava
 remove_unsupported_lava = function(area, data, vi, x, y, z)
 	--if below water level, abort. Caverns are on their own.
-	if y < water_level or y > lava_y_cutoff or not area:contains(x, y, z) then return end
+	if y < water_level or not area:contains(x, y, z) then return end
 
 	if data[vi] == c_lava then
 		if is_adjacent_to_air(area, data, x, y, z) then
@@ -109,15 +107,11 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	vm:get_data(data)
 	
 	for vi, x, y, z in area:iterp_xyz(minp, maxp) do
-		if y > lava_y_cutoff and data[vi] == c_lava then
-			data[vi] = c_air
-		else
-			if obsidian_lining then
-				obsidianize(area, data, vi, x, y, z, minp, maxp)
-			end
-			if ameliorate_floods then
-				remove_unsupported_lava(area, data, vi, x, y, z)
-			end
+		if obsidian_lining then
+			obsidianize(area, data, vi, x, y, z, minp, maxp)
+		end
+		if ameliorate_floods then
+			remove_unsupported_lava(area, data, vi, x, y, z)
 		end
 	end
 		
