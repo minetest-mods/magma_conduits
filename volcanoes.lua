@@ -345,7 +345,7 @@ local send_volcano_state = function(pos, name)
 	local corner_xz = get_corner(pos)
 	local volcano = get_volcano(pos)
 	if volcano == nil then
-		return
+		return false
 	end
 	local location = {x=math.floor(volcano.location.x), y=volcano.depth_peak, z=math.floor(volcano.location.z)}
 	local text = "Peak at " .. minetest.pos_to_string(location)
@@ -360,18 +360,21 @@ local send_volcano_state = function(pos, name)
 	end
 	
 	minetest.chat_send_player(name, text)
+	return true
 end
 
 local send_nearby_states = function(pos, name)
-	send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z+volcano_region_size}, name)
-	send_volcano_state({x=pos.x, y=0, z=pos.z+volcano_region_size}, name)
-	send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z+volcano_region_size}, name)
-	send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z}, name)
-	send_volcano_state(pos, name)
-	send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z}, name)
-	send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z-volcano_region_size}, name)
-	send_volcano_state({x=pos.x, y=0, z=pos.z-volcano_region_size}, name)
-	send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z-volcano_region_size}, name)
+	local retval = false
+	retval = send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z+volcano_region_size}, name) or retval
+	retval = send_volcano_state({x=pos.x, y=0, z=pos.z+volcano_region_size}, name) or retval
+	retval = send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z+volcano_region_size}, name) or retval
+	retval = send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z}, name) or retval
+	retval = send_volcano_state(pos, name) or retval
+	retval = send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z}, name) or retval
+	retval = send_volcano_state({x=pos.x-volcano_region_size, y=0, z=pos.z-volcano_region_size}, name) or retval
+	retval = send_volcano_state({x=pos.x, y=0, z=pos.z-volcano_region_size}, name) or retval
+	retval = send_volcano_state({x=pos.x+volcano_region_size, y=0, z=pos.z-volcano_region_size}, name) or retval
+	return retval
 end
 
 minetest.register_chatcommand("findvolcano", {
@@ -385,11 +388,19 @@ minetest.register_chatcommand("findvolcano", {
 			pos.y = tonumber(pos.y)
 			pos.z = tonumber(pos.z)
 			if pos.x and pos.y and pos.z then
-				send_nearby_states(pos, name)
+				if not send_nearby_states(pos, name) then
+					minetest.chat_send_player(name, "No volcanoes near " .. minetest.pos_to_string(pos))
+				end
 				return true
 			else
 				local playerobj = minetest.get_player_by_name(name)
-				send_nearby_states(playerobj:get_pos(), name)
+				pos = playerobj:get_pos()
+				if not send_nearby_states(pos, name) then
+					pos.x = math.floor(pos.x)
+					pos.y = math.floor(pos.y)
+					pos.z = math.floor(pos.z)
+					minetest.chat_send_player(name, "No volcanoes near " .. minetest.pos_to_string(pos))
+				end
 				return true
 			end
 		else
