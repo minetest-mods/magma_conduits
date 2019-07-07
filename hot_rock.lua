@@ -3,13 +3,50 @@ if magma_conduits.config.glowing_rock then
 local modpath = minetest.get_modpath(minetest.get_current_modname())
 local S, NS = dofile(modpath.."/intllib.lua")
 
+local simple_copy
+simple_copy = function(t)
+	local r = {}
+	for k, v in pairs(t) do
+		if type(v) == "table" then
+			r[k] = simple_copy(v)
+		else
+			r[k] = v
+		end
+	end
+	return r
+end
+
+magma_conduits.make_hot_node_def = function(name, original_def)
+	original_def.groups = original_def.groups or {}
+	local hot_node_def = simple_copy(original_def)
+
+	local hot_name = name .. "_glowing"
+	original_def.groups.lava_heatable = 1
+	original_def._magma_conduits_heats_to = hot_name
+	
+	hot_node_def.groups.lava_heated = 1
+	hot_node_def.groups.not_in_creative_inventory = 1
+	hot_node_def._magma_conduits_cools_to = name
+	hot_node_def.description = S("Hot @1", hot_node_def.description)
+	
+	for k, v in ipairs(hot_node_def.tiles) do
+		hot_node_def.tiles[k] = v .. "^magma_conduits_lava_overlay.png"
+	end
+	hot_node_def.light_source = 6
+	if hot_node_def.drop == nil then
+		hot_node_def.drop = name
+	end
+	
+	return hot_name, hot_node_def
+end
+
 minetest.register_node("magma_conduits:hot_cobble", {
 	description = S("Hot Cobble"),
 	_doc_items_longdesc = S("Hot stone riven with cracks and seeping traces of lava."),
 	_doc_items_usagehelp = S("When normal stone is heated by lava it is converted into this. Beware when digging here!"),
 	tiles = {"magma_conduits_hot_cobble.png"},
 	is_ground_content = false,
-	groups = {cracky = 3, stone = 2, lava_heated=1},
+	groups = {cracky = 3, stone = 2, lava_heated=1, not_in_creative_inventory=1},
 	_magma_conduits_cools_to = "default:cobble",
 	sounds = default.node_sound_stone_defaults(),
 	light_source = 6,
@@ -23,24 +60,11 @@ minetest.register_node("magma_conduits:glow_obsidian", {
 	tiles = {"magma_conduits_glow_obsidian.png"},
 	is_ground_content = true,
 	sounds = default.node_sound_stone_defaults(),
-	groups = {cracky=1, lava_heated=1, level=2},
+	groups = {cracky=1, lava_heated=1, level=2, not_in_creative_inventory=1},
 	_magma_conduits_cools_to = "default:obsidian",
 	light_source = 6,
 	drop = "default:obsidian",
 })
-
-local simple_copy
-simple_copy = function(t)
-	local r = {}
-	for k, v in pairs(t) do
-		if type(v) == "table" then
-			r[k] = simple_copy(v)
-		else
-			r[k] = v
-		end
-	end
-	return r
-end
 
 -- can't use minetest.override_item to change group memberships here due to issue https://github.com/minetest/minetest/issues/5518
 
