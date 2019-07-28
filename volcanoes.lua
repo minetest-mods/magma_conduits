@@ -213,7 +213,10 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		local distance_perturbation = (nvals_perlin[vi3d]+1)*10
 		local distance = vector.distance({x=x, y=y, z=z}, {x=x_coord, y=y, z=z_coord}) - distance_perturbation
 
-		local biome_data = magma_conduits.biome_ids[biomemap[(z-minz) * sidelen + (x-minx) + 1]]
+		local biome_data
+		if biomemap ~= nil then
+			biome_data = magma_conduits.biome_ids[biomemap[(z-minz) * sidelen + (x-minx) + 1]]
+		end
 
 		-- Determine what materials to use at this y level
 		-------------------------------------------------------------------------------------------------
