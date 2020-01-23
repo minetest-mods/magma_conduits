@@ -7,6 +7,10 @@
 local modpath = minetest.get_modpath(minetest.get_current_modname())
 dofile(modpath .. "/volcano_lava.lua") -- https://github.com/minetest/minetest/issues/7864, https://github.com/minetest/minetest/issues/7878
 
+dofile(modpath .. "/hud.lua")
+
+local S, NS = dofile(modpath.."/intllib.lua")
+
 local depth_root = magma_conduits.config.volcano_min_depth
 local depth_base = -50 -- point where the mountain root starts expanding
 local depth_maxwidth = -30 -- point of maximum width
@@ -94,6 +98,12 @@ local get_corner = function(pos)
 	return {x = math.floor((pos.x+32) / volcano_region_size) * volcano_region_size - 32, z = math.floor((pos.z+32) / volcano_region_size) * volcano_region_size - 32}
 end
 
+
+local namegen_path = minetest.get_modpath("namegen")
+if namegen_path then
+	namegen.parse_lines(io.lines(modpath.."/volcano_names.cfg"))
+end
+
 local get_volcano = function(pos)
 	local corner_xz = get_corner(pos)
 	local next_seed = math.random(1, 1000000000)
@@ -104,20 +114,33 @@ local get_volcano = function(pos)
 		math.randomseed(next_seed)
 		return nil
 	end
-	
+
+	local name = S("a volcano")
+
 	local location = scatter_2d(corner_xz, volcano_region_size, radius_cone_max)
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava
 	if state < state_extinct then
 		depth_lava = - math.random(1, math.abs(depth_root)) -- extinct, put the lava somewhere deep.
+		if namegen_path then
+			name = namegen.generate("active_volcano")
+		end
 	elseif state < state_dormant then
 		depth_lava = depth_peak - math.random(5, 50) -- dormant
+		if namegen_path then
+			name = namegen.generate("active_volcano")
+		end
 	else
 		depth_lava = depth_peak - math.random(1, 25) -- active, put the lava near the top
+		if namegen_path then
+			name = namegen.generate("active_volcano")
+		end
 	end
 	local slope = math.random() * (slope_max - slope_min) + slope_min
 	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
-		
+	
+	magma_conduits.name_volcano({x=location.x, y=depth_peak, z=location.z}, name)
+	
 	math.randomseed(next_seed)
 	return {location = location, depth_peak = depth_peak, depth_lava = depth_lava, slope = slope, state = state, caldera = caldera}
 end
