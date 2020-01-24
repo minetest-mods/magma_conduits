@@ -128,12 +128,12 @@ local get_volcano = function(pos)
 	elseif state < state_dormant then
 		depth_lava = depth_peak - math.random(5, 50) -- dormant
 		if namegen_path then
-			name = namegen.generate("active_volcano")
+			name = namegen.generate("inactive_volcano")
 		end
 	else
 		depth_lava = depth_peak - math.random(1, 25) -- active, put the lava near the top
 		if namegen_path then
-			name = namegen.generate("active_volcano")
+			name = namegen.generate("inactive_volcano")
 		end
 	end
 	local slope = math.random() * (slope_max - slope_min) + slope_min

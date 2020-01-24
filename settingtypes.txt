@@ -41,3 +41,9 @@ magma_conduits_volcano_magma_chamber_radius_multiplier (Magma chamber radius mul
 magma_conduits_volcano_probability_active (Probability of active volcano in region) float 0.3
 magma_conduits_volcano_probability_dormant (Probability of dormant volcano in region) float 0.15
 magma_conduits_volcano_probability_extinct (Probability of extinct volcano in region) float 0.15
+
+[Volcano HUD waypoints]
+magma_conduits_show_volcanoes_in_hud (Show volcanoes in HUD) bool true
+magma_conduits_hud_requires_mapping_kit (Require mapping kit to show in HUD) bool true
+magma_conduits_volcano_discovery_range (Volcano discovery range) int 60
+magma_conduits_volcano_visibility_range (Volcano HUD visibility range) int 1200

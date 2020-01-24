@@ -120,18 +120,18 @@ minetest.register_globalstep(function(dtime)
 		local min_visual_edge = vector.subtract(player_pos, visual_range)
 		local max_visual_edge = vector.add(player_pos, visual_range)
 		local visual_volcanos = areastore:get_areas_in_area(min_visual_edge, max_visual_edge, true, true, true)
-		for id, settlement in pairs(visual_volcanos) do
+		for id, volcano in pairs(visual_volcanos) do
 
-			local data = minetest.deserialize(settlement.data)
-			local distance = vector.distance(player_pos, settlement.min)
+			local data = minetest.deserialize(volcano.data)
+			local distance = vector.distance(player_pos, volcano.min)
 			local discovered_by = data.discovered_by
-			local settlement_pos = vector.add(settlement.min, {x=0, y=2, z=0})
+			local volcano_pos = vector.add(volcano.min, {x=0, y=2, z=0})
 
 			if distance < discovery_range and not discovered_by[player_name] then
 				-- Update areastore
 				data.discovered_by[player_name] = true
 				areastore:remove_area(id)
-				areastore:insert_area(settlement.min, settlement.min, minetest.serialize(data), id)
+				areastore:insert_area(volcano.min, volcano.min, minetest.serialize(data), id)
 
 				-- Mark that we'll need to save volcanoes
 				new_discovery = true
@@ -146,13 +146,13 @@ minetest.register_globalstep(function(dtime)
 					formspec)
 				minetest.chat_send_player(player_name, discovery_note)
 				minetest.log("action", "[magma_conduits] " .. player_name .. " discovered " .. note_name)
-				--minetest.sound_play({name = "settlements_chime01", gain = 0.25}, {to_player=player_name})
+				minetest.sound_play({name = "magma_conduits_chime01", gain = 0.25}, {to_player=player_name})
 			end
 
 			local has_map = (not requires_mappingkit) or (player:get_inventory():contains_item("main", "map:mapping_kit"))
 			if has_map and distance < visual_range and discovered_by[player_name] then
-				local settlement_name = data.name or "Volcano"
-				add_hud_marker(player, player_name, settlement_pos, settlement_name)
+				local volcano_name = data.name or "Volcano"
+				add_hud_marker(player, player_name, volcano_pos, volcano_name)
 			end
 		end
 	end
@@ -162,3 +162,96 @@ minetest.register_globalstep(function(dtime)
 		volcano_save()
 	end
 end)
+
+----------------------------------------------------------------------
+-- Chatcommands
+
+local function get_nearest_volcano_within_range(pos, range, name)
+	local min_edge = vector.subtract(pos, range)
+	local max_edge = vector.add(pos, range)
+	local volcano_list = areastore:get_areas_in_area(min_edge, max_edge, true, true, true)
+
+	local min_dist = range + 1 -- start with number beyond range
+	local min_id = nil
+	local min_data = nil
+	local min_pos = nil
+	for id, volcano in pairs(volcano_list) do
+		local data = minetest.deserialize(volcano.data)
+		local distance = vector.distance(pos, volcano.min)
+		if distance < min_dist and data.discovered_by[name] then
+			min_dist = distance
+			min_id = id
+			min_data = data
+			min_pos = volcano.min
+		end
+	end
+
+	return min_pos, min_id, min_data
+end
+
+
+minetest.register_chatcommand("volcano_rename_nearest", {
+	description = S("Change the name of the nearest volcano within visible range"),
+	param = S("The new name for this volcano"),
+	privs = {["server"]=true},
+	func = function(name, param)
+		if param == "" then
+			minetest.chat_send_player(name, S("Please enter a new name"))
+			return
+		end
+		local player = minetest.get_player_by_name(name)
+		local player_pos = player:get_pos()
+
+		local min_pos, min_id, min_data = get_nearest_volcano_within_range(player_pos, visual_range, name)
+
+		if min_id ~= nil then
+			local oldname = min_data.name
+			min_data.name = param
+			areastore:remove_area(min_id)
+			areastore:insert_area(min_pos, min_pos, minetest.serialize(min_data), min_id)
+			volcano_save()
+			minetest.log("action", "[magma_conduits] Renamed " .. oldname .. " to " .. param)
+			minetest.chat_send_player(name, S("Volcano successfully renamed from @1 to @2.", oldname, param))
+			remove_all_hud_markers()
+			return
+		end
+
+		minetest.chat_send_player(name, S("No known volcanoes within @1m found.", visual_range))
+	end,
+})
+
+local function set_all_discovered(player_name, state)
+	local volcano_list = areastore:get_areas_in_area(
+		{x=-32000, y=-32000, z=-32000}, {x=32000, y=32000, z=32000}, true, true, true)
+	for id, volcano in pairs(volcano_list) do
+		local data = minetest.deserialize(volcano.data)
+		data.discovered_by[player_name] = state
+		areastore:remove_area(id)
+		areastore:insert_area(volcano.min, volcano.min, minetest.serialize(data), id)
+	end
+	volcano_save()
+end
+
+minetest.register_chatcommand("volcano_discover_all", {
+	description = S("Set all volcanoes as known to you or another player"),
+	param = S("player_name, or nothing for yourself"),
+	privs = {["server"]=true},
+	func = function(name, param)
+		if param ~= "" then
+			name = param
+		end
+		set_all_discovered(name, true)
+	end,
+})
+
+minetest.register_chatcommand("volcano_undiscover_all", {
+	description = S("Set all volcanoes as unknown to you or another player"),
+	param = S("player_name, or nothing for yourself"),
+	privs = {["server"]=true},
+	func = function(name, param)
+		if param ~= "" then
+			name = param
+		end
+		set_all_discovered(name, nil)
+	end,
+})
