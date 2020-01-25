@@ -9,23 +9,23 @@ dofile(modpath .. "/volcano_lava.lua") -- https://github.com/minetest/minetest/i
 
 local S, NS = dofile(modpath.."/intllib.lua")
 
-
-local requires_mapping_kit
-if minetest.settings:get_bool("magma_conduits_hud_requires_mapping_kit", true)
-	and minetest.registered_items["map:mapping_kit"] then
-	requires_mapping_kit = "map:mapping_kit"
-end
-
 local named_waypoints_modpath = minetest.get_modpath("named_waypoints")
 if named_waypoints_modpath then
-	named_waypoints.register_named_waypoints("volcanoes", {
+	local volcano_waypoint_def = {
 		default_name = S("a volcano"),
 		default_color = 0xFFFFFF,
-		visibility_requires_item = requires_mapping_kit,
-		visibility_volume_radius = tonumber(minetest.settings:get("magma_conduits_volcano_visibility_range")) or 1000,
 		discovery_volume_radius = tonumber(minetest.settings:get("magma_conduits_volcano_discovery_range")) or 60,
-		on_discovery = named_waypoints.default_discovery_popup
-	})
+	}
+	if minetest.settings:get_bool("magma_conduits_hud_requires_mapping_kit", true)
+		and minetest.registered_items["map:mapping_kit"] then
+		volcano_waypoint_def.visibility_requires_item = "map:mapping_kit"
+	end
+
+	if minetest.settings:get_bool("magma_conduits_show_volcanoes_in_hud", true) then
+		volcano_waypoint_def.visibility_volume_radius = tonumber(minetest.settings:get("magma_conduits_volcano_visibility_range")) or 1000
+		volcano_waypoint_def.on_discovery = named_waypoints.default_discovery_popup
+	end
+	named_waypoints.register_named_waypoints("volcanoes", volcano_waypoint_def)
 end
 
 
