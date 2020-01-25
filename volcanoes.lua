@@ -15,7 +15,7 @@ local named_waypoints_modpath = minetest.get_modpath("named_waypoints")
 if named_waypoints_modpath then
 	named_waypoints.register_named_waypoints("volcanoes", {
 		default_name = S("a volcano"),
-		default_color = 0xFFFF88,
+		default_color = 0xFFFFFF,
 		visibility_requires_item = "map:mapping_kit",
 		visibility_volume_radius = 1200,
 		discovery_volume_radius = 60,
@@ -129,30 +129,34 @@ local get_volcano = function(pos)
 	end
 
 	local name
+	local color
 	local location = scatter_2d(corner_xz, volcano_region_size, radius_cone_max)
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava
 	if state < state_extinct then
 		depth_lava = - math.random(1, math.abs(depth_root)) -- extinct, put the lava somewhere deep.
 		if namegen_path then
-			name = namegen.generate("active_volcano")
+			name = namegen.generate("inactive_volcano")
 		end
+		color = 0xFFFFFF
 	elseif state < state_dormant then
 		depth_lava = depth_peak - math.random(5, 50) -- dormant
 		if namegen_path then
 			name = namegen.generate("inactive_volcano")
 		end
+		color = 0xFFFFFF
 	else
 		depth_lava = depth_peak - math.random(1, 25) -- active, put the lava near the top
 		if namegen_path then
-			name = namegen.generate("inactive_volcano")
+			name = namegen.generate("active_volcano")
 		end
+		color = 0xFF7F00 -- orange
 	end
 	local slope = math.random() * (slope_max - slope_min) + slope_min
 	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
 	
 	if named_waypoints_modpath then
-		named_waypoints.add_waypoint("volcanoes", {x=location.x, y=depth_peak, z=location.z}, {name=name})
+		named_waypoints.add_waypoint("volcanoes", {x=location.x, y=depth_peak, z=location.z}, {name=name, color=color})
 	end
 	
 	math.randomseed(next_seed)
@@ -448,3 +452,4 @@ minetest.register_chatcommand("findvolcano", {
 		end
 	end,
 })
+
