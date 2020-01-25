@@ -7,9 +7,22 @@
 local modpath = minetest.get_modpath(minetest.get_current_modname())
 dofile(modpath .. "/volcano_lava.lua") -- https://github.com/minetest/minetest/issues/7864, https://github.com/minetest/minetest/issues/7878
 
-dofile(modpath .. "/hud.lua")
-
 local S, NS = dofile(modpath.."/intllib.lua")
+
+--dofile(modpath .. "/hud.lua")
+
+local named_waypoints_modpath = minetest.get_modpath("named_waypoints")
+if named_waypoints_modpath then
+	named_waypoints.register_named_waypoints("volcanoes", {
+		default_name = S("a volcano"),
+		default_color = 0xFFFF88,
+		visibility_requires_item = "map:mapping_kit",
+		visibility_volume_radius = 1200,
+		discovery_volume_radius = 60,
+		on_discovery = named_waypoints.default_discovery_popup
+	})
+end
+
 
 local depth_root = magma_conduits.config.volcano_min_depth
 local depth_base = -50 -- point where the mountain root starts expanding
@@ -115,8 +128,7 @@ local get_volcano = function(pos)
 		return nil
 	end
 
-	local name = S("a volcano")
-
+	local name
 	local location = scatter_2d(corner_xz, volcano_region_size, radius_cone_max)
 	local depth_peak = math.random(depth_minpeak, depth_maxpeak)
 	local depth_lava
@@ -139,7 +151,9 @@ local get_volcano = function(pos)
 	local slope = math.random() * (slope_max - slope_min) + slope_min
 	local caldera = math.random() * (caldera_max - caldera_min) + caldera_min
 	
-	magma_conduits.name_volcano({x=location.x, y=depth_peak, z=location.z}, name)
+	if named_waypoints_modpath then
+		named_waypoints.add_waypoint("volcanoes", {x=location.x, y=depth_peak, z=location.z}, {name=name})
+	end
 	
 	math.randomseed(next_seed)
 	return {location = location, depth_peak = depth_peak, depth_lava = depth_lava, slope = slope, state = state, caldera = caldera}
