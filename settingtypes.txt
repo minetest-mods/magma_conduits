@@ -46,4 +46,4 @@ magma_conduits_volcano_probability_extinct (Probability of extinct volcano in re
 magma_conduits_show_volcanoes_in_hud (Show volcanoes in HUD) bool true
 magma_conduits_hud_requires_mapping_kit (Require mapping kit to show in HUD) bool true
 magma_conduits_volcano_discovery_range (Volcano discovery range) int 60
-magma_conduits_volcano_visibility_range (Volcano HUD visibility range) int 1200
+magma_conduits_volcano_visibility_range (Volcano HUD visibility range) int 1000
