@@ -143,13 +143,11 @@ local get_volcano = function(pos)
 		if namegen_path then
 			name = namegen.generate("inactive_volcano")
 		end
-		color = 0xFFFFFF
 	elseif state < state_dormant then
 		depth_lava = depth_peak - math.random(5, 50) -- dormant
 		if namegen_path then
 			name = namegen.generate("inactive_volcano")
 		end
-		color = 0xFFFFFF
 	else
 		depth_lava = depth_peak - math.random(1, 25) -- active, put the lava near the top
 		if namegen_path then
