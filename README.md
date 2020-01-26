@@ -35,3 +35,7 @@ Magma veins can be optionally be lined with a layer of obsidian. The density of 
 Volcanoes are large cone-shaped mountains formed from magma that rises through a central vertical pipe. This mod can scatter randomly sized and shaped volcanoes across the map, with configurable spacing and probability. Volcanoes come in "extinct", "dormant" and "active" forms, and tall volcanoes can have a mantle of snow clinging to their peaks.
 
 If a player has the "findvolcano" priviledge he can use the "findvolcano" console command to locate nearby volcanoes.
+
+### Namegen and named_waypoint support
+
+If the mods [namegen](https://github.com/FaceDeer/namegen) and [named_waypoints](https://github.com/FaceDeer/named_waypoints) are installed, then names and HUD markers will be automatically generated for volcanoes.
