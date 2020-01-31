@@ -16,11 +16,15 @@ if named_waypoints_modpath then
 		default_color = 0xFFFFFF,
 		discovery_volume_radius = tonumber(minetest.settings:get("magma_conduits_volcano_discovery_range")) or 60,
 	}
-	if minetest.settings:get_bool("magma_conduits_hud_requires_mapping_kit", true)
-		and minetest.registered_items["map:mapping_kit"] then
-		volcano_waypoint_def.visibility_requires_item = "map:mapping_kit"
+	
+	if minetest.settings:get_bool("magma_conduits_hud_requires_item", true) then
+		local item_required = minetest.settings:get("magma_conduits_hud_item_required")
+		if item_required == nil or item_required == "" then
+			item_required = "map:mapping_kit"
+		end	
+		volcano_waypoint_def.visibility_requires_item = item_required
 	end
-
+	
 	if minetest.settings:get_bool("magma_conduits_show_volcanoes_in_hud", true) then
 		volcano_waypoint_def.visibility_volume_radius = tonumber(minetest.settings:get("magma_conduits_volcano_visibility_range")) or 1000
 		volcano_waypoint_def.on_discovery = named_waypoints.default_discovery_popup
