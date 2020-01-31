@@ -211,7 +211,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	local chunk_lengths = {x = sidelen, y = sidelen, z = sidelen} --table of chunk edges
 
 	nobj_perlin = nobj_perlin or minetest.get_perlin_map(perlin_params, chunk_lengths)
-	local nvals_perlin = nobj_perlin:get3dMap_flat(minp, nvals_perlin_buffer) -- switch to get_3d_map_flat for minetest v0.5
+	local nvals_perlin = nobj_perlin:get_3d_map_flat(minp, nvals_perlin_buffer)
 	local noise_area = VoxelArea:new{MinEdge=minp, MaxEdge=maxp}
 	local noise_iterator = noise_area:iterp(minp, maxp)
 	
