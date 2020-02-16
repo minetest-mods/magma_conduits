@@ -7,7 +7,7 @@
 local modpath = minetest.get_modpath(minetest.get_current_modname())
 dofile(modpath .. "/volcano_lava.lua") -- https://github.com/minetest/minetest/issues/7864, https://github.com/minetest/minetest/issues/7878
 
-local S, NS = dofile(modpath.."/intllib.lua")
+local S = magma_conduits.S
 
 local named_waypoints_modpath = minetest.get_modpath("named_waypoints")
 if named_waypoints_modpath then
@@ -382,7 +382,7 @@ end)
 ----------------------------------------------------------------------------------------------
 -- Debugging and sightseeing commands
 
-minetest.register_privilege("findvolcano", { description = "Allows players to use a console command to find volcanoes", give_to_singleplayer = false})
+minetest.register_privilege("findvolcano", { description = S("Allows players to use a console command to find volcanoes"), give_to_singleplayer = false})
 
 function round(val, decimal)
   if (decimal) then
@@ -430,7 +430,7 @@ end
 
 minetest.register_chatcommand("findvolcano", {
     params = "pos", -- Short parameter description
-    description = "find the volcanoes near the player's map region, or in the map region containing pos if provided",
+    description = S("find the volcanoes near the player's map region, or in the map region containing pos if provided"),
     func = function(name, param)
 		if minetest.check_player_privs(name, {findvolcano = true}) then
 			local pos = {}
@@ -440,7 +440,7 @@ minetest.register_chatcommand("findvolcano", {
 			pos.z = tonumber(pos.z)
 			if pos.x and pos.y and pos.z then
 				if not send_nearby_states(pos, name) then
-					minetest.chat_send_player(name, "No volcanoes near " .. minetest.pos_to_string(pos))
+					minetest.chat_send_player(name, S("No volcanoes near @1", minetest.pos_to_string(pos)))
 				end
 				return true
 			else
@@ -450,12 +450,12 @@ minetest.register_chatcommand("findvolcano", {
 					pos.x = math.floor(pos.x)
 					pos.y = math.floor(pos.y)
 					pos.z = math.floor(pos.z)
-					minetest.chat_send_player(name, "No volcanoes near " .. minetest.pos_to_string(pos))
+					minetest.chat_send_player(name, S("No volcanoes near @1", minetest.pos_to_string(pos)))
 				end
 				return true
 			end
 		else
-			return false, "You need the findvolcano privilege to use this command."
+			return false, S("You need the findvolcano privilege to use this command.")
 		end
 	end,
 })

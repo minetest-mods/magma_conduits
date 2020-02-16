@@ -1,7 +1,6 @@
 if magma_conduits.config.glowing_rock then
 
-local modpath = minetest.get_modpath(minetest.get_current_modname())
-local S, NS = dofile(modpath.."/intllib.lua")
+local S = magma_conduits.S
 
 local simple_copy
 simple_copy = function(t)
