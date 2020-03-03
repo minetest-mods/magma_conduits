@@ -1,12 +1,25 @@
-Allows players to use a console command to find volcanoes=
+# textdomain: magma_conduits
+
+
+### hot_rock.lua ###
+
 Hot @1=
 Hot Cobble=
 Hot Obsidian=
 Hot stone riven with cracks and seeping traces of lava.=
-No volcanoes near @1=
 Obsidian heated to a dull red glow.=
+
 When normal obsidian is heated by lava it is converted into this. Beware when digging here!=
+
 When normal stone is heated by lava it is converted into this. Beware when digging here!=
+
+
+### volcanoes.lua ###
+
+Allows players to use a console command to find volcanoes=
+No volcanoes near @1=
 You need the findvolcano privilege to use this command.=
 a volcano=
+
 find the volcanoes near the player's map region, or in the map region containing pos if provided=
+
