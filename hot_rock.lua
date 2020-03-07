@@ -15,7 +15,7 @@ simple_copy = function(t)
 	return r
 end
 
-magma_conduits.make_hot_node_def = function(name, original_def)
+magma_conduits.make_hot_node_def = function(name, original_def, description)
 	original_def.groups = original_def.groups or {}
 	local hot_node_def = simple_copy(original_def)
 
@@ -26,7 +26,7 @@ magma_conduits.make_hot_node_def = function(name, original_def)
 	hot_node_def.groups.lava_heated = 1
 	hot_node_def.groups.not_in_creative_inventory = 1
 	hot_node_def._magma_conduits_cools_to = name
-	hot_node_def.description = S("Hot @1", hot_node_def.description)
+	hot_node_def.description = description or S("Hot @1", hot_node_def.description)
 	
 	for k, v in ipairs(hot_node_def.tiles) do
 		hot_node_def.tiles[k] = v .. "^magma_conduits_lava_overlay.png"
