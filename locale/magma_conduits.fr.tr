@@ -1,0 +1,25 @@
+# textdomain: magma_conduits
+
+
+### hot_rock.lua ###
+
+Hot @1=@1 chaude
+Hot Cobble=Pierre chaude
+Hot Obsidian=Obsidienne chaude
+Hot stone riven with cracks and seeping traces of lava.=Pierre chaude rongée par des fissures et des traces de laves.
+Obsidian heated to a dull red glow.=Obsidienne chaude émettant une lueur rouge terne.
+
+When normal obsidian is heated by lava it is converted into this. Beware when digging here!=Lorsque de l’obsidienne est chauffée par la lave, elle se transforme en ce bloc. Prenez garde en le minant !
+
+When normal stone is heated by lava it is converted into this. Beware when digging here!=Lorsque de la pierre est chauffée par la lave, elle se transforme en ce bloc. Prenez garde en le minant !
+
+
+### volcanoes.lua ###
+
+Allows players to use a console command to find volcanoes=Permet au joueurs d’utiliser une commande pour trouver les volcans.
+No volcanoes near @1=Pas de volcan près de @1.
+You need the findvolcano privilege to use this command.=Le privilège findvolcano est nécessaire pour utiliser cette commande.
+a volcano=un volcan
+
+find the volcanoes near the player's map region, or in the map region containing pos if provided=trouve les volcans proches de la zone du joueur, ou proche de la zone contenant les coordonnées si elles sont fournies
+
