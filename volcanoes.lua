@@ -121,9 +121,9 @@ local get_corner = function(pos)
 end
 
 
-local namegen_path = minetest.get_modpath("namegen")
-if namegen_path then
-	namegen.parse_lines(io.lines(modpath.."/volcano_names.cfg"))
+local name_generator_path = minetest.get_modpath("name_generator")
+if name_generator_path then
+	name_generator.parse_lines(io.lines(modpath.."/volcano_names.cfg"))
 end
 
 local get_volcano = function(pos)
@@ -144,18 +144,18 @@ local get_volcano = function(pos)
 	local depth_lava
 	if state < state_extinct then
 		depth_lava = - math.random(1, math.abs(depth_root)) -- extinct, put the lava somewhere deep.
-		if namegen_path then
-			name = namegen.generate("inactive_volcano")
+		if name_generator_path then
+			name = name_generator.generate("inactive_volcano")
 		end
 	elseif state < state_dormant then
 		depth_lava = depth_peak - math.random(5, 50) -- dormant
-		if namegen_path then
-			name = namegen.generate("inactive_volcano")
+		if name_generator_path then
+			name = name_generator.generate("inactive_volcano")
 		end
 	else
 		depth_lava = depth_peak - math.random(1, 25) -- active, put the lava near the top
-		if namegen_path then
-			name = namegen.generate("active_volcano")
+		if name_generator_path then
+			name = name_generator.generate("active_volcano")
 		end
 		color = 0xFF7F00 -- orange
 	end
